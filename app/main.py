@@ -1,5 +1,6 @@
 import sys
 import os
+import shlex
 import subprocess
 
 
@@ -14,7 +15,7 @@ def main():
         if not command_line:
             continue
 
-        args = command_line.split()
+        args = shlex.split(command_line)
         program = args[0]
 
         # Handle builtins
