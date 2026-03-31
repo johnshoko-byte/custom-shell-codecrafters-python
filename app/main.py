@@ -4,8 +4,6 @@ import shlex
 import subprocess
 import re
 
-# ---------------- Helper Functions ----------------
-
 
 def write_output(output, redirect_file=None):
     """Write output to file if redirect_file is given, else print to stdout."""
@@ -31,19 +29,26 @@ def find_executable(cmd_name):
 
 def parse_redirection(command_line):
     """
-    Detect > or 1> redirection.
-    Returns tuple: (cleaned_command_line, redirect_file or None)
+    Detect >, 1> (stdout) and 2> (stderr) redirection.
+    Returns (clean_command_line, stdout_file, stderr_file)
     """
-    match = re.search(r'(?:\d*)>\s*(\S+)', command_line)
-    if match:
-        redirect_file = match.group(1)
-        # Remove the redirection part from command_line
-        command_line = command_line[:match.start()].strip()
-        return command_line, redirect_file
-    return command_line, None
+    stdout_file = None
+    stderr_file = None
 
+    # Check stderr first (2> filename)
+    match_err = re.search(r'2>\s*(\S+)', command_line)
+    if match_err:
+        stderr_file = match_err.group(1)
+        command_line = command_line[:match_err.start()].strip()
 
-# ---------------- Main Shell ----------------
+    # Check stdout ( > or 1> filename)
+    match_out = re.search(r'(?:1|)>\s*(\S+)', command_line)
+    if match_out:
+        stdout_file = match_out.group(1)
+        command_line = command_line[:match_out.start()].strip()
+
+    return command_line, stdout_file, stderr_file
+
 
 def main():
     builtins = ["echo", "exit", "type", "pwd", "cd"]
@@ -56,7 +61,6 @@ def main():
         if not command_line:
             continue
 
-        # Handle output redirection
         command_line, redirect_file = parse_redirection(command_line)
 
         args = shlex.split(command_line)
@@ -65,7 +69,6 @@ def main():
 
         program = args[0]
 
-        # ---------------- Built-ins ----------------
         if program == "exit":
             break
 
@@ -102,19 +105,27 @@ def main():
             except FileNotFoundError:
                 print(f"cd: {args[1]}: No such file or directory")
 
-        # ---------------- External Commands ----------------
         else:
             exe_path = find_executable(program)
             if exe_path:
                 try:
-                    if redirect_file:
-                        with open(redirect_file, 'w') as f:
-                            # stdout goes to file, stderr goes to terminal (default)
-                            subprocess.run([program] + args[1:],
-                                           executable=exe_path, stdout=f)
-                    else:
-                        subprocess.run([program] + args[1:],
-                                       executable=exe_path)
+                    # Open files if needed
+                    stdout_f = open(stdout_file, 'w') if stdout_file else None
+                    stderr_f = open(stderr_file, 'w') if stderr_file else None
+
+                    subprocess.run(
+                        [program] + args[1:],
+                        executable=exe_path,
+                        stdout=stdout_f,  # redirect stdout if given
+                        stderr=stderr_f   # redirect stderr if given
+                    )
+
+                    # Close files if opened
+                    if stdout_f:
+                        stdout_f.close()
+                    if stderr_f:
+                        stderr_f.close()
+
                 except Exception as e:
                     print(f"Error running {program}: {e}")
             else:
