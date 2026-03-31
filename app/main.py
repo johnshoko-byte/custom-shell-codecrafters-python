@@ -8,6 +8,8 @@ def main():
         pass
 
         command = input()
+        if command == "exit":
+            break
         print(f"{command}: command not found")
 
 
