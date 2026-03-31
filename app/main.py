@@ -5,7 +5,7 @@ import subprocess
 
 
 def write_output(output, stdout_file=None, stderr_file=None):
-    """Handle stdout + ensure stderr file is created if needed."""
+    """Handle stdout and ensure stderr file is created if needed."""
 
     # Always create files if specified
     if stdout_file:
@@ -36,11 +36,13 @@ def parse_redirection(command_line):
     > file
     1> file
     2> file
+
+    Supports quoted executables correctly.
     """
+    tokens = shlex.split(command_line)
+
     stdout_file = None
     stderr_file = None
-
-    tokens = command_line.split()
     clean_tokens = []
 
     i = 0
@@ -57,7 +59,7 @@ def parse_redirection(command_line):
             clean_tokens.append(token)
             i += 1
 
-    return " ".join(clean_tokens), stdout_file, stderr_file
+    return clean_tokens, stdout_file, stderr_file
 
 
 def main():
@@ -75,11 +77,9 @@ def main():
         if not command_line:
             continue
 
-        # Parse redirection
-        command_line, stdout_file, stderr_file = parse_redirection(
-            command_line)
+        # ✅ FIXED: args come directly from parser
+        args, stdout_file, stderr_file = parse_redirection(command_line)
 
-        args = shlex.split(command_line)
         if not args:
             continue
 
@@ -118,7 +118,7 @@ def main():
             try:
                 os.chdir(target)
 
-                # STILL create stderr file if requested
+                # still create stderr file if requested
                 if stderr_file:
                     open(stderr_file, 'w').close()
 
@@ -141,7 +141,7 @@ def main():
                 continue
 
             try:
-                # Always create files first (IMPORTANT)
+                # Always create files first
                 if stdout_file:
                     open(stdout_file, 'w').close()
                 if stderr_file:
