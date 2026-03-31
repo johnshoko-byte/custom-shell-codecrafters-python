@@ -4,7 +4,7 @@ import subprocess
 
 
 def main():
-    builtins = ["echo", "exit", "type"]
+    builtins = ["echo", "exit", "type", "pwd"]
 
     while True:
         sys.stdout.write("$ ")
@@ -38,6 +38,8 @@ def main():
                         break
                 if not found:
                     print(f"{cmd_name}: not found")
+        elif program == "pwd":
+            print(os.getcwd())
 
         # External programs
         else:
