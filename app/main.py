@@ -4,7 +4,7 @@ import subprocess
 
 
 def main():
-    builtins = ["echo", "exit", "type", "pwd"]
+    builtins = ["echo", "exit", "type", "pwd", "cd"]
 
     while True:
         sys.stdout.write("$ ")
@@ -40,8 +40,15 @@ def main():
                     print(f"{cmd_name}: not found")
         elif program == "pwd":
             print(os.getcwd())
-
-        # External programs
+        elif program == "cd":
+            if len(args) < 2:
+                print("cd: missing argument")
+            else:
+                folder = args[1]
+                try:
+                    os.chdir(folder)
+                except FileNotFoundError:
+                    print(f"cd: {folder}: No such file or directory")
         else:
             # Search PATH
             paths = os.environ.get("PATH", "").split(":")
