@@ -41,14 +41,17 @@ def main():
         elif program == "pwd":
             print(os.getcwd())
         elif program == "cd":
+            # If no argument, go home
             if len(args) < 2:
-                print("cd: missing argument")
+                folder = os.path.expanduser("~")
             else:
-                folder = args[1]
+                # expand ~ anywhere in path
+                folder = os.path.expanduser(args[1])
+
                 try:
                     os.chdir(folder)
                 except FileNotFoundError:
-                    print(f"cd: {folder}: No such file or directory")
+                    print(f"cd: {args[1]}: No such file or directory")
         else:
             # Search PATH
             paths = os.environ.get("PATH", "").split(":")
