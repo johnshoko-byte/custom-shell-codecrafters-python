@@ -36,7 +36,7 @@ def main():
             if redirect_file:
                 try:
                     with open(redirect_file, 'w') as f:
-                        f.write(output + "\n")
+                        f.write(output + "\n")  # newline is OK
                 except Exception as e:
                     print(f"Error writing to {redirect_file}: {e}")
             else:
