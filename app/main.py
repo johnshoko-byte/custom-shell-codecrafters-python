@@ -49,8 +49,8 @@ def main():
                 if os.path.isfile(full_path) and os.access(full_path, os.X_OK):
                     found = True
                     try:
-                        # Run program with arguments
-                        subprocess.run([full_path] + args[1:])
+                        subprocess.run([program] + args[1:],
+                                       executable=full_path)
                     except Exception as e:
                         print(f"Error running {program}: {e}")
                     break
