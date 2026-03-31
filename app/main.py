@@ -1,52 +1,61 @@
 import sys
 import os
+import subprocess
 
 
 def main():
     builtins = ["echo", "exit", "type"]
 
     while True:
-        # Display prompt
         sys.stdout.write("$ ")
-        sys.stdout.flush()  # Make sure $ shows immediately
+        sys.stdout.flush()
 
-        command = input().strip()
-        if not command:
-            continue  # Skip empty commands
+        command_line = input().strip()
+        if not command_line:
+            continue
 
-        # Exit command
-        if command == "exit":
+        args = command_line.split()
+        program = args[0]
+
+        # Handle builtins
+        if program == "exit":
             break
-
-        # Echo command
-        elif command.startswith("echo "):
-            print(command[5:])
-
-        # Type command
-        elif command.startswith("type "):
-            cmd_name = command[5:]
-
-            # Check if builtin
+        elif program == "echo":
+            print(" ".join(args[1:]))
+        elif program == "type":
+            cmd_name = args[1] if len(args) > 1 else ""
             if cmd_name in builtins:
                 print(f"{cmd_name} is a shell builtin")
-                continue
+            else:
+                # Search PATH
+                paths = os.environ.get("PATH", "").split(":")
+                found = False
+                for directory in paths:
+                    full_path = os.path.join(directory, cmd_name)
+                    if os.path.isfile(full_path) and os.access(full_path, os.X_OK):
+                        print(f"{cmd_name} is {full_path}")
+                        found = True
+                        break
+                if not found:
+                    print(f"{cmd_name}: not found")
 
-            # Search PATH for executable
+        # External programs
+        else:
+            # Search PATH
             paths = os.environ.get("PATH", "").split(":")
             found = False
             for directory in paths:
-                full_path = os.path.join(directory, cmd_name)
+                full_path = os.path.join(directory, program)
                 if os.path.isfile(full_path) and os.access(full_path, os.X_OK):
-                    print(f"{cmd_name} is {full_path}")
                     found = True
+                    try:
+                        # Run program with arguments
+                        subprocess.run([full_path] + args[1:])
+                    except Exception as e:
+                        print(f"Error running {program}: {e}")
                     break
-
             if not found:
-                print(f"{cmd_name}: not found")
-
-        # Unknown command
-        else:
-            print(f"{command}: command not found")
+                print(f"{program}: not found")
 
 
 if __name__ == "__main__":
