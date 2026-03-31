@@ -109,8 +109,9 @@ def main():
                 try:
                     if redirect_file:
                         with open(redirect_file, 'w') as f:
-                            subprocess.run(
-                                [program] + args[1:], executable=exe_path, stdout=f, stderr=subprocess.PIPE)
+                            # stdout goes to file, stderr goes to terminal (default)
+                            subprocess.run([program] + args[1:],
+                                           executable=exe_path, stdout=f)
                     else:
                         subprocess.run([program] + args[1:],
                                        executable=exe_path)
