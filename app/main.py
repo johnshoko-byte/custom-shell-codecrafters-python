@@ -1,22 +1,50 @@
 import sys
+import os
 
 
 def main():
-    while True:
-        # TODO: Uncomment the code below to pass the first stage
-        sys.stdout.write("$ ")
-        pass
+    builtins = ["echo", "exit", "type"]
 
-        command = input()
+    while True:
+        # Display prompt
+        sys.stdout.write("$ ")
+        sys.stdout.flush()  # Make sure $ shows immediately
+
+        command = input().strip()
+        if not command:
+            continue  # Skip empty commands
+
+        # Exit command
         if command == "exit":
             break
+
+        # Echo command
         elif command.startswith("echo "):
             print(command[5:])
+
+        # Type command
         elif command.startswith("type "):
-            if command[5:] in ["echo", "exit", "type"]:
-                print(f"{command[5:]} is a shell builtin")
-            else:
-                print(f"{command[5:]}: not found")
+            cmd_name = command[5:]
+
+            # Check if builtin
+            if cmd_name in builtins:
+                print(f"{cmd_name} is a shell builtin")
+                continue
+
+            # Search PATH for executable
+            paths = os.environ.get("PATH", "").split(":")
+            found = False
+            for directory in paths:
+                full_path = os.path.join(directory, cmd_name)
+                if os.path.isfile(full_path) and os.access(full_path, os.X_OK):
+                    print(f"{cmd_name} is {full_path}")
+                    found = True
+                    break
+
+            if not found:
+                print(f"{cmd_name}: not found")
+
+        # Unknown command
         else:
             print(f"{command}: command not found")
 
