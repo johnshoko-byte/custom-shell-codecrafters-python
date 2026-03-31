@@ -32,11 +32,18 @@ def main():
             break
 
         elif program == "echo":
-            output = " ".join(args[1:])
+            # Print everything except the last argument
+            if len(args) > 2:
+                output = " ".join(args[1:-1])
+            elif len(args) == 2:
+                output = args[1]
+            else:
+                output = ""
+
             if redirect_file:
                 try:
                     with open(redirect_file, 'w') as f:
-                        f.write(output + "\n")  # newline is OK
+                        f.write(output + "\n")
                 except Exception as e:
                     print(f"Error writing to {redirect_file}: {e}")
             else:
