@@ -5,22 +5,18 @@ import subprocess
 import re
 
 
-def write_output(output, redirect_file=None):
-    """Write output to file if redirect_file is given, else print to stdout."""
-    if redirect_file:
-        try:
-            with open(redirect_file, 'w') as f:
-                f.write(output + "\n")
-        except Exception as e:
-            print(f"Error writing to {redirect_file}: {e}")
+def write_output(output, file=None):
+    """Write output to file if given, else print."""
+    if file:
+        with open(file, 'w') as f:
+            f.write(output + "\n")
     else:
         print(output)
 
 
 def find_executable(cmd_name):
-    """Search PATH for executable and return full path if found, else None."""
-    paths = os.environ.get("PATH", "").split(":")
-    for directory in paths:
+    """Find executable in PATH."""
+    for directory in os.environ.get("PATH", "").split(":"):
         full_path = os.path.join(directory, cmd_name)
         if os.path.isfile(full_path) and os.access(full_path, os.X_OK):
             return full_path
@@ -29,25 +25,35 @@ def find_executable(cmd_name):
 
 def parse_redirection(command_line):
     """
-    Detect >, 1> (stdout) and 2> (stderr) redirection.
-    Returns (clean_command_line, stdout_file, stderr_file)
+    Handles:
+    > file
+    1> file
+    2> file
+
+    Returns:
+    cleaned_command, stdout_file, stderr_file
     """
     stdout_file = None
     stderr_file = None
 
-    # Check stderr first (2> filename)
-    match_err = re.search(r'2>\s*(\S+)', command_line)
-    if match_err:
-        stderr_file = match_err.group(1)
-        command_line = command_line[:match_err.start()].strip()
+    tokens = command_line.split()
+    clean_tokens = []
 
-    # Check stdout ( > or 1> filename)
-    match_out = re.search(r'(?:1|)>\s*(\S+)', command_line)
-    if match_out:
-        stdout_file = match_out.group(1)
-        command_line = command_line[:match_out.start()].strip()
+    i = 0
+    while i < len(tokens):
+        token = tokens[i]
 
-    return command_line, stdout_file, stderr_file
+        if token in [">", "1>"]:
+            stdout_file = tokens[i + 1]
+            i += 2
+        elif token == "2>":
+            stderr_file = tokens[i + 1]
+            i += 2
+        else:
+            clean_tokens.append(token)
+            i += 1
+
+    return " ".join(clean_tokens), stdout_file, stderr_file
 
 
 def main():
@@ -57,11 +63,17 @@ def main():
         sys.stdout.write("$ ")
         sys.stdout.flush()
 
-        command_line = input().strip()
+        try:
+            command_line = input().strip()
+        except EOFError:
+            break
+
         if not command_line:
             continue
 
-        command_line, redirect_file = parse_redirection(command_line)
+        # ✅ FIXED: unpack 3 values
+        command_line, stdout_file, stderr_file = parse_redirection(
+            command_line)
 
         args = shlex.split(command_line)
         if not args:
@@ -69,67 +81,71 @@ def main():
 
         program = args[0]
 
+        # ---------------- BUILTINS ----------------
+
         if program == "exit":
             break
 
         elif program == "echo":
-            # Filter out numeric test markers (like '1' added by tester)
-            words = args[1:]
-            filtered_words = [w for w in words if not w.isdigit()]
-            output = " ".join(filtered_words)
-            write_output(output, redirect_file)
+            output = " ".join(args[1:])
+            write_output(output, stdout_file)
 
         elif program == "pwd":
-            output = os.getcwd()
-            write_output(output, redirect_file)
+            write_output(os.getcwd(), stdout_file)
 
         elif program == "type":
-            cmd_name = args[1] if len(args) > 1 else ""
-            if cmd_name in builtins:
-                output = f"{cmd_name} is a shell builtin"
+            cmd = args[1] if len(args) > 1 else ""
+            if cmd in builtins:
+                output = f"{cmd} is a shell builtin"
             else:
-                exe_path = find_executable(cmd_name)
-                if exe_path:
-                    output = f"{cmd_name} is {exe_path}"
+                path = find_executable(cmd)
+                if path:
+                    output = f"{cmd} is {path}"
                 else:
-                    output = f"{cmd_name}: not found"
-            write_output(output, redirect_file)
+                    output = f"{cmd}: not found"
+
+            write_output(output, stdout_file)
 
         elif program == "cd":
-            if len(args) < 2:
-                folder = os.path.expanduser("~")
-            else:
-                folder = os.path.expanduser(args[1])
+            target = os.path.expanduser(args[1]) if len(
+                args) > 1 else os.path.expanduser("~")
             try:
-                os.chdir(folder)
+                os.chdir(target)
             except FileNotFoundError:
-                print(f"cd: {args[1]}: No such file or directory")
+                error_msg = f"cd: {args[1]}: No such file or directory"
+                if stderr_file:
+                    with open(stderr_file, 'w') as f:
+                        f.write(error_msg + "\n")
+                else:
+                    print(error_msg)
+
+        # ---------------- EXTERNAL COMMANDS ----------------
 
         else:
             exe_path = find_executable(program)
-            if exe_path:
-                try:
-                    # Open files if needed
-                    stdout_f = open(stdout_file, 'w') if stdout_file else None
-                    stderr_f = open(stderr_file, 'w') if stderr_file else None
 
-                    subprocess.run(
-                        [program] + args[1:],
-                        executable=exe_path,
-                        stdout=stdout_f,  # redirect stdout if given
-                        stderr=stderr_f   # redirect stderr if given
-                    )
-
-                    # Close files if opened
-                    if stdout_f:
-                        stdout_f.close()
-                    if stderr_f:
-                        stderr_f.close()
-
-                except Exception as e:
-                    print(f"Error running {program}: {e}")
-            else:
+            if not exe_path:
                 print(f"{program}: not found")
+                continue
+
+            try:
+                stdout_f = open(stdout_file, 'w') if stdout_file else None
+                stderr_f = open(stderr_file, 'w') if stderr_file else None
+
+                subprocess.run(
+                    [program] + args[1:],
+                    executable=exe_path,
+                    stdout=stdout_f,
+                    stderr=stderr_f
+                )
+
+                if stdout_f:
+                    stdout_f.close()
+                if stderr_f:
+                    stderr_f.close()
+
+            except Exception as e:
+                print(f"Error running {program}: {e}")
 
 
 if __name__ == "__main__":
