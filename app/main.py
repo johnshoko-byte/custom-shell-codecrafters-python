@@ -44,24 +44,26 @@ def parse_redirection(command_line):
     while i < len(tokens):
         token = tokens[i]
 
-        # STDOUT
-        if token == ">>":
-            stdout_file = tokens[i + 1]
-            append_stdout = True
-            i += 2
-        elif token in [">", "1>"]:
+        # --- STDOUT ---
+        if token in [">", "1>"]:
             stdout_file = tokens[i + 1]
             append_stdout = False
             i += 2
 
-        # STDERR
-        elif token == "2>>":
-            stderr_file = tokens[i + 1]
-            append_stderr = True
+        elif token in [">>", "1>>"]:
+            stdout_file = tokens[i + 1]
+            append_stdout = True
             i += 2
+
+        # --- STDERR ---
         elif token == "2>":
             stderr_file = tokens[i + 1]
             append_stderr = False
+            i += 2
+
+        elif token == "2>>":
+            stderr_file = tokens[i + 1]
+            append_stderr = True
             i += 2
 
         else:
