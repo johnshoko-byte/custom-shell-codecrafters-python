@@ -81,9 +81,11 @@ def parse_redirection(command_line):
 
 def completer(text, state):
     buffer = readline.get_line_buffer()
-    tokens = buffer.split()
 
-    if len(tokens) <= 1:
+    # -------------------------
+    # COMMAND COMPLETION
+    # -------------------------
+    if not buffer or buffer.split()[0] == buffer.strip():
         prefix = text
 
         builtins = ["echo", "exit"]
@@ -99,21 +101,31 @@ def completer(text, state):
 
         return None
 
-    prefix = tokens[-1] if buffer and buffer[-1] != " " else ""
+    # -------------------------
+    # FILE / DIRECTORY COMPLETION
+    # -------------------------
 
-    if prefix == "":
-        matches = sorted(os.listdir("."))
+    # IMPORTANT: use raw buffer context, NOT split()
+    last_token = buffer.split()[-1] if buffer.strip() else ""
+
+    # if user just typed "stat " → last_token is empty
+    if buffer.endswith(" "):
+        prefix = ""
     else:
-        matches = sorted(glob.glob(prefix + "*"))
+        prefix = last_token
+
+    # list files in current directory
+    matches = sorted(os.listdir("."))
+
+    # filter manually (IMPORTANT FIX)
+    matches = [m for m in matches if m.startswith(prefix)]
 
     if state < len(matches):
         match = matches[state]
 
-        # directory → trailing slash, no space
         if os.path.isdir(match):
             return match + "/"
 
-        # file → trailing space
         return match + " "
 
     return None
