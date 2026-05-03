@@ -104,10 +104,14 @@ def completer(text, state):
     # FILE / DIRECTORY COMPLETION
     # -------------------------
 
-    # 🔥 CRITICAL FIX: use `text` ONLY
+    # 🔥 KEY FIX: ALWAYS use text
     prefix = text
 
-    matches = sorted(glob.glob(prefix + "*"))
+    # If empty prefix (like "du " case), list current directory
+    if prefix == "":
+        matches = sorted(os.listdir("."))
+    else:
+        matches = sorted(glob.glob(prefix + "*"))
 
     if state < len(matches):
         match = matches[state]
