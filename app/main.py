@@ -85,7 +85,7 @@ def completer(text, state):
     # -------------------------
     # COMMAND COMPLETION
     # -------------------------
-    if not buffer or buffer.split()[0] == buffer.strip():
+    if buffer == text or " " not in buffer.strip():
         builtins = ["echo", "exit"]
         executables = EXECUTABLES or []
 
@@ -94,17 +94,19 @@ def completer(text, state):
             if cmd.startswith(text)
         )
 
-        return (matches[state] + " ") if state < len(matches) else None
+        if state < len(matches):
+            return matches[state] + " "
+
+        return None
 
     # -------------------------
     # FILE / DIRECTORY COMPLETION
     # -------------------------
 
-    # 🔥 FIX: manually extract CURRENT WORD
-    last_space = buffer.rfind(" ")
-    prefix = buffer[last_space + 1:]  # current word being typed
+    # extract CURRENT WORD safely
+    prefix = text
 
-    # If empty → complete from current directory
+    # if empty → list all files/dirs
     if prefix == "":
         matches = sorted(os.listdir("."))
     else:
@@ -112,16 +114,15 @@ def completer(text, state):
             f for f in os.listdir(".") if f.startswith(prefix)
         )
 
+    # IMPORTANT: correct state handling
     if state >= len(matches):
         return None
 
     match = matches[state]
 
-    # directory rule
     if os.path.isdir(match):
         return match + "/"
 
-    # file rule
     return match + " "
 
 
