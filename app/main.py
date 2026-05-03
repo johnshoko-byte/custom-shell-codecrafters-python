@@ -1,8 +1,8 @@
 import sys
 import os
+import readline
 import shlex
 import subprocess
-import readline
 import glob
 
 EXECUTABLES = set()
@@ -82,10 +82,9 @@ def parse_redirection(command_line):
 def completer(text, state):
     buffer = readline.get_line_buffer()
 
-    parts = buffer.split()
-
     # ---------------- COMMAND MODE ----------------
-    if len(parts) <= 1:
+    # command mode ONLY if no space OR cursor at start
+    if buffer == "" or buffer[-1] != " " and " " not in buffer:
         builtins = ["echo", "exit"]
         executables = EXECUTABLES or []
 
@@ -98,10 +97,10 @@ def completer(text, state):
             return matches[state] + " "
         return None
 
-    # ---------------- FILE/DIR MODE ----------------
+    # ---------------- FILE / DIR MODE ----------------
 
-    # IMPORTANT: last word only
-    prefix = text
+    # 🔥 CRITICAL: ALWAYS use last token only
+    prefix = buffer.split()[-1] if buffer.split() else ""
 
     entries = os.listdir(".")
 
@@ -110,12 +109,12 @@ def completer(text, state):
         if e.startswith(prefix)
     )
 
-    # 🔥 KEY FIX: return first match only when state = 0
-    if state == 0 and matches:
-        match = matches[0]
-        return match + ("/" if os.path.isdir(match) else " ")
+    if state >= len(matches):
+        return None
 
-    return None
+    match = matches[state]
+
+    return match + ("/" if os.path.isdir(match) else " ")
 
 
 def get_executables():
