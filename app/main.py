@@ -2,6 +2,7 @@ import sys
 import os
 import shlex
 import subprocess
+import readline
 
 
 def write_output(output, stdout_file=None, stderr_file=None, append_stdout=False):
@@ -73,9 +74,21 @@ def parse_redirection(command_line):
     return clean_tokens, stdout_file, stderr_file, append_stdout, append_stderr
 
 
+def completer(text, state):
+    builtins = ["echo", "exit"]
+
+    matches = [cmd for cmd in builtins if cmd.startswith(text)]
+
+    if state < len(matches):
+        return matches[state] + " "
+    else:
+        return None
+
+
 def main():
     builtins = ["echo", "exit", "type", "pwd", "cd"]
-
+    readline.set_completer(completer)
+    readline.parse_and_bind("tab: complete")
     while True:
         sys.stdout.write("$ ")
         sys.stdout.flush()
