@@ -3,6 +3,7 @@ import os
 import shlex
 import subprocess
 import readline
+import glob
 
 EXECUTABLES = set()
 TAB_COUNT = 0
@@ -83,6 +84,13 @@ def completer(text, state):
     tokens = buffer.split()
 
     if len(tokens) > 1:
+        prefix = tokens[-1]
+
+        matches = sorted(glob.glob(prefix + "*"))
+
+        if state < len(matches):
+            return matches[state] + " "
+
         return None
 
     prefix = tokens[0] if tokens else ""
