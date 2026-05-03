@@ -132,15 +132,15 @@ def setup_autocomplete():
 
 def main():
     builtins = ["echo", "exit", "type", "pwd", "cd"]
+
     readline.set_completer(completer)
     readline.parse_and_bind("tab: complete")
-    setup_autocomplete()
-    while True:
-        sys.stdout.write("$ ")
-        sys.stdout.flush()
 
+    setup_autocomplete()
+
+    while True:
         try:
-            command_line = input().strip()
+            command_line = input("$ ")
         except EOFError:
             break
 
@@ -148,7 +148,8 @@ def main():
             continue
 
         args, stdout_file, stderr_file, append_stdout, append_stderr = parse_redirection(
-            command_line)
+            command_line
+        )
 
         if not args:
             continue
@@ -187,17 +188,12 @@ def main():
 
             try:
                 os.chdir(target)
-
-                # still create stderr file if requested
-                if stderr_file:
-                    open(stderr_file, 'w').close()
-
             except FileNotFoundError:
                 error_msg = f"cd: {args[1]}: No such file or directory"
 
+                # FIX: stderr must always go to write_output OR print cleanly
                 if stderr_file:
-                    with open(stderr_file, 'w') as f:
-                        f.write(error_msg + "\n")
+                    write_output(error_msg, stderr_file)
                 else:
                     print(error_msg)
 
@@ -211,15 +207,8 @@ def main():
                 continue
 
             try:
-
                 stdout_mode = 'a' if append_stdout else 'w'
                 stderr_mode = 'a' if append_stderr else 'w'
-
-                # Create files first
-                if stdout_file:
-                    open(stdout_file, stdout_mode).close()
-                if stderr_file:
-                    open(stderr_file, stderr_mode).close()
 
                 stdout_f = open(
                     stdout_file, stdout_mode) if stdout_file else None
