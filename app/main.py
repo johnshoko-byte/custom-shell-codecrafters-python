@@ -4,6 +4,8 @@ import shlex
 import subprocess
 import readline
 
+EXECUTABLES = None
+
 
 def write_output(output, stdout_file=None, stderr_file=None, append_stdout=False):
     mode = 'a' if append_stdout else 'w'
@@ -75,14 +77,49 @@ def parse_redirection(command_line):
 
 
 def completer(text, state):
+    buffer = readline.get_line_buffer()
+    tokens = buffer.split()
+
+    if len(tokens) > 1:
+        return None
+
     builtins = ["echo", "exit"]
 
-    matches = [cmd for cmd in builtins if cmd.startswith(text)]
+    all_commands = builtins + list(EXECUTABLES)
+
+    matches = [cmd for cmd in all_commands if cmd.startswith(text)]
+    matches.sort()
 
     if state < len(matches):
         return matches[state] + " "
-    else:
-        return None
+    return None
+
+
+def get_executables():
+    executables = set()
+
+    for directory in os.environ.get("PATH", "").split(":"):
+        if not os.path.isdir(directory):
+            continue
+
+        try:
+            for file in os.listdir(directory):
+                full_path = os.path.join(directory, file)
+                if os.path.isfile(full_path) and os.access(full_path, os.X_OK):
+                    executables.add(file)
+        except PermissionError:
+            continue
+
+    return executables
+
+
+def setup_autocomplete():
+    global EXECUTABLES
+
+    EXECUTABLES = get_executables()  # cache once
+
+    readline.set_completer(completer)
+    readline.parse_and_bind("tab: complete")
 
 
 def main():
