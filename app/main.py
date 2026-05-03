@@ -82,13 +82,10 @@ def parse_redirection(command_line):
 def completer(text, state):
     buffer = readline.get_line_buffer()
 
-    # -------------------------
-    # detect if we're completing command or argument
-    # -------------------------
-    is_command = buffer.find(" ") == -1 or buffer.endswith(" ")
+    parts = buffer.split()
 
-    # ---------------- COMMAND COMPLETION ----------------
-    if is_command:
+    # ---------------- COMMAND MODE ----------------
+    if len(parts) <= 1:
         builtins = ["echo", "exit"]
         executables = EXECUTABLES or []
 
@@ -99,13 +96,12 @@ def completer(text, state):
 
         if state < len(matches):
             return matches[state] + " "
-
         return None
 
-    # ---------------- FILE / DIR COMPLETION ----------------
+    # ---------------- FILE/DIR MODE ----------------
 
-    # get current word AFTER last space
-    prefix = buffer.split()[-1] if buffer.split() else ""
+    # IMPORTANT: last word only
+    prefix = text
 
     entries = os.listdir(".")
 
@@ -114,15 +110,12 @@ def completer(text, state):
         if e.startswith(prefix)
     )
 
-    if state >= len(matches):
-        return None
+    # 🔥 KEY FIX: return first match only when state = 0
+    if state == 0 and matches:
+        match = matches[0]
+        return match + ("/" if os.path.isdir(match) else " ")
 
-    match = matches[state]
-
-    if os.path.isdir(match):
-        return match + "/"
-
-    return match + " "
+    return None
 
 
 def get_executables():
