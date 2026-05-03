@@ -89,7 +89,14 @@ def completer(text, state):
         matches = sorted(glob.glob(prefix + "*"))
 
         if state < len(matches):
-            return matches[state] + " "
+            match = matches[state]
+
+            # DIRECTORY CASE
+            if os.path.isdir(match):
+                return match + "/"
+
+            # FILE CASE
+            return match + " "
 
         return None
 
