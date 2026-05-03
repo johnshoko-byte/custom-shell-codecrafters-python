@@ -5,6 +5,8 @@ import subprocess
 import readline
 
 EXECUTABLES = set()
+TAB_COUNT = 0
+LAST_BUFFER = ""
 
 
 def write_output(output, stdout_file=None, stderr_file=None, append_stdout=False):
@@ -77,20 +79,46 @@ def parse_redirection(command_line):
 
 
 def completer(text, state):
+    global TAB_COUNT, LAST_BUFFER
+
     buffer = readline.get_line_buffer()
+
+    # reset counter if user changed input
+    if buffer != LAST_BUFFER:
+        TAB_COUNT = 0
+        LAST_BUFFER = buffer
+
     tokens = buffer.split()
 
     if len(tokens) > 1:
         return None
 
+    prefix = tokens[0] if tokens else ""
+
     builtins = ["echo", "exit"]
-    all_commands = builtins + list(EXECUTABLES or [])
+    executables = EXECUTABLES or []
 
-    matches = [cmd for cmd in all_commands if cmd.startswith(text)]
-    matches.sort()
+    matches = sorted([cmd for cmd in executables if cmd.startswith(prefix)])
 
-    if state < len(matches):
-        return matches[state] + " "   # IMPORTANT SPACE
+    # ❌ no matches
+    if not matches:
+        return None
+
+    if TAB_COUNT == 0:
+        TAB_COUNT += 1
+        sys.stdout.write("\x07")
+        sys.stdout.flush()
+        return None
+
+    if TAB_COUNT == 1:
+        TAB_COUNT += 1
+
+        print("\n" + "  ".join(matches))
+        sys.stdout.write(f"$ {prefix}")
+        sys.stdout.flush()
+
+        return None
+
     return None
 
 
