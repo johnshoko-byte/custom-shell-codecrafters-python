@@ -81,10 +81,9 @@ def parse_redirection(command_line):
 
 def completer(text, state):
     buffer = readline.get_line_buffer()
-
     parts = buffer.split()
 
-    # ---------------- COMMAND MODE ----------------
+    # ---------------- COMMAND COMPLETION ----------------
     if len(parts) <= 1:
         builtins = ["echo", "exit"]
         executables = EXECUTABLES or []
@@ -94,23 +93,21 @@ def completer(text, state):
             if cmd.startswith(text)
         )
 
-        if state < len(matches):
-            return matches[state] + " "
+        return (matches[state] + " ") if state < len(matches) else None
 
-        return None
-
-    # ---------------- FILE / DIR MODE ----------------
+    # ---------------- FILE / DIRECTORY COMPLETION ----------------
 
     # current word being completed
     prefix = text
 
-    # IMPORTANT FIX: empty prefix must still return ALL entries
-    entries = os.listdir(".")
+    # ALWAYS build full candidate list first
+    candidates = os.listdir(".")
 
+    # filter if needed
     if prefix:
-        entries = [e for e in entries if e.startswith(prefix)]
+        candidates = [c for c in candidates if c.startswith(prefix)]
 
-    matches = sorted(entries)
+    matches = sorted(candidates)
 
     if state >= len(matches):
         return None
