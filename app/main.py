@@ -4,7 +4,7 @@ import shlex
 import subprocess
 import readline
 
-EXECUTABLES = None
+EXECUTABLES = set()
 
 
 def write_output(output, stdout_file=None, stderr_file=None, append_stdout=False):
@@ -84,14 +84,13 @@ def completer(text, state):
         return None
 
     builtins = ["echo", "exit"]
-
-    all_commands = builtins + list(EXECUTABLES)
+    all_commands = builtins + list(EXECUTABLES or [])
 
     matches = [cmd for cmd in all_commands if cmd.startswith(text)]
     matches.sort()
 
     if state < len(matches):
-        return matches[state] + " "
+        return matches[state] + " "   # IMPORTANT SPACE
     return None
 
 
@@ -116,16 +115,18 @@ def get_executables():
 def setup_autocomplete():
     global EXECUTABLES
 
-    EXECUTABLES = get_executables()  # cache once
+    EXECUTABLES = get_executables()
 
     readline.set_completer(completer)
     readline.parse_and_bind("tab: complete")
+    readline.set_completer_delims(" \t\n")
 
 
 def main():
     builtins = ["echo", "exit", "type", "pwd", "cd"]
     readline.set_completer(completer)
     readline.parse_and_bind("tab: complete")
+    setup_autocomplete()
     while True:
         sys.stdout.write("$ ")
         sys.stdout.flush()
