@@ -4,15 +4,16 @@ import shlex
 import subprocess
 
 
-def write_output(output, stdout_file=None, stderr_file=None, append_mode=False):
-    mode = 'a' if append_mode else 'w'
+def write_output(output, stdout_file=None, stderr_file=None, append_stdout=False):
+    mode = 'a' if append_stdout else 'w'
 
-    # Always create files
+    # Create files
     if stdout_file:
         open(stdout_file, mode).close()
     if stderr_file:
         open(stderr_file, 'w').close()
 
+    # Write stdout
     if stdout_file:
         with open(stdout_file, mode) as f:
             f.write(output + "\n")
@@ -34,7 +35,8 @@ def parse_redirection(command_line):
 
     stdout_file = None
     stderr_file = None
-    append_mode = False
+    append_stdout = False
+    append_stderr = False
 
     clean_tokens = []
 
@@ -42,22 +44,31 @@ def parse_redirection(command_line):
     while i < len(tokens):
         token = tokens[i]
 
+        # STDOUT
         if token == ">>":
             stdout_file = tokens[i + 1]
-            append_mode = True
+            append_stdout = True
             i += 2
         elif token in [">", "1>"]:
             stdout_file = tokens[i + 1]
-            append_mode = False
+            append_stdout = False
+            i += 2
+
+        # STDERR
+        elif token == "2>>":
+            stderr_file = tokens[i + 1]
+            append_stderr = True
             i += 2
         elif token == "2>":
             stderr_file = tokens[i + 1]
+            append_stderr = False
             i += 2
+
         else:
             clean_tokens.append(token)
             i += 1
 
-    return clean_tokens, stdout_file, stderr_file, append_mode
+    return clean_tokens, stdout_file, stderr_file, append_stdout, append_stderr
 
 
 def main():
@@ -75,7 +86,7 @@ def main():
         if not command_line:
             continue
 
-        args, stdout_file, stderr_file, append_mode = parse_redirection(
+        args, stdout_file, stderr_file, append_stdout, append_stderr = parse_redirection(
             command_line)
 
         if not args:
@@ -90,7 +101,7 @@ def main():
 
         elif program == "echo":
             output = " ".join(args[1:])
-            write_output(output, stdout_file, stderr_file, append_mode)
+            write_output(output, stdout_file, stderr_file, append_stdout)
 
         elif program == "pwd":
             write_output(os.getcwd(), stdout_file, stderr_file)
@@ -107,7 +118,7 @@ def main():
                 else:
                     output = f"{cmd}: not found"
 
-            write_output(output, stdout_file, stderr_file, append_mode)
+            write_output(output, stdout_file, stderr_file, append_stdout)
 
         elif program == "cd":
             target = os.path.expanduser(args[1]) if len(
@@ -139,16 +150,20 @@ def main():
                 continue
 
             try:
-                # Always create files first
-                if stdout_file:
-                    open(stdout_file, 'w').close()
-                if stderr_file:
-                    open(stderr_file, 'w').close()
 
-                mode = 'a' if append_mode else 'w'
-                stdout_f = open(stdout_file, mode) if stdout_file else None
-                mode = 'a' if append_mode else 'w'
-                stdout_f = open(stdout_file, mode) if stdout_file else None
+                stdout_mode = 'a' if append_stdout else 'w'
+                stderr_mode = 'a' if append_stderr else 'w'
+
+                # Create files first
+                if stdout_file:
+                    open(stdout_file, stdout_mode).close()
+                if stderr_file:
+                    open(stderr_file, stderr_mode).close()
+
+                stdout_f = open(
+                    stdout_file, stdout_mode) if stdout_file else None
+                stderr_f = open(
+                    stderr_file, stderr_mode) if stderr_file else None
 
                 subprocess.run(
                     [program] + args[1:],
