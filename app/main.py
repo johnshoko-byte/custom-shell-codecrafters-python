@@ -80,9 +80,6 @@ def parse_redirection(command_line):
 
 
 def completer(text, state):
-    import os
-    import glob
-
     buffer = readline.get_line_buffer()
     tokens = buffer.split()
 
@@ -102,7 +99,7 @@ def completer(text, state):
 
         return None
 
-    prefix = text
+    prefix = tokens[-1] if buffer[-1] != " " else ""
 
     matches = sorted(glob.glob(prefix + "*"))
 
