@@ -82,9 +82,10 @@ def parse_redirection(command_line):
 def completer(text, state):
     buffer = readline.get_line_buffer()
 
-    # ---------------- COMMAND MODE ----------------
-    # command mode ONLY if no space OR cursor at start
-    if buffer == "" or buffer[-1] != " " and " " not in buffer:
+    # -------------------------
+    # COMMAND MODE (ONLY when no space yet)
+    # -------------------------
+    if " " not in buffer.strip():
         builtins = ["echo", "exit"]
         executables = EXECUTABLES or []
 
@@ -97,10 +98,12 @@ def completer(text, state):
             return matches[state] + " "
         return None
 
-    # ---------------- FILE / DIR MODE ----------------
+    # -------------------------
+    # FILE / DIRECTORY MODE
+    # -------------------------
 
-    # 🔥 CRITICAL: ALWAYS use last token only
-    prefix = buffer.split()[-1] if buffer.split() else ""
+    # IMPORTANT: ONLY use current word
+    prefix = text
 
     entries = os.listdir(".")
 
