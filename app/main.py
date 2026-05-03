@@ -82,10 +82,13 @@ def parse_redirection(command_line):
 def completer(text, state):
     buffer = readline.get_line_buffer()
 
-    parts = buffer.split()
+    # -------------------------
+    # detect if we're completing command or argument
+    # -------------------------
+    is_command = buffer.find(" ") == -1 or buffer.endswith(" ")
 
     # ---------------- COMMAND COMPLETION ----------------
-    if len(parts) <= 1:
+    if is_command:
         builtins = ["echo", "exit"]
         executables = EXECUTABLES or []
 
@@ -99,16 +102,13 @@ def completer(text, state):
 
         return None
 
-    # ---------------- FILE / DIRECTORY COMPLETION ----------------
+    # ---------------- FILE / DIR COMPLETION ----------------
 
-    # 🔥 CRITICAL: extract current word manually (reliable method)
-    last_space = buffer.rfind(" ")
-    prefix = buffer[last_space + 1:] if last_space != -1 else text
+    # get current word AFTER last space
+    prefix = buffer.split()[-1] if buffer.split() else ""
 
-    # if prefix empty → list everything in cwd
     entries = os.listdir(".")
 
-    # filter
     matches = sorted(
         e for e in entries
         if e.startswith(prefix)
