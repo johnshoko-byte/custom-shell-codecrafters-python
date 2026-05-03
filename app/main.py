@@ -81,6 +81,7 @@ def parse_redirection(command_line):
 
 def completer(text, state):
     buffer = readline.get_line_buffer()
+
     parts = buffer.split()
 
     # ---------------- COMMAND COMPLETION ----------------
@@ -93,21 +94,25 @@ def completer(text, state):
             if cmd.startswith(text)
         )
 
-        return (matches[state] + " ") if state < len(matches) else None
+        if state < len(matches):
+            return matches[state] + " "
+
+        return None
 
     # ---------------- FILE / DIRECTORY COMPLETION ----------------
 
-    # current word being completed
-    prefix = text
+    # 🔥 CRITICAL: extract current word manually (reliable method)
+    last_space = buffer.rfind(" ")
+    prefix = buffer[last_space + 1:] if last_space != -1 else text
 
-    # ALWAYS build full candidate list first
-    candidates = os.listdir(".")
+    # if prefix empty → list everything in cwd
+    entries = os.listdir(".")
 
-    # filter if needed
-    if prefix:
-        candidates = [c for c in candidates if c.startswith(prefix)]
-
-    matches = sorted(candidates)
+    # filter
+    matches = sorted(
+        e for e in entries
+        if e.startswith(prefix)
+    )
 
     if state >= len(matches):
         return None
