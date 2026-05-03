@@ -99,16 +99,21 @@ def completer(text, state):
 
         return None
 
-    prefix = tokens[-1] if buffer[-1] != " " else ""
+    prefix = tokens[-1] if buffer and buffer[-1] != " " else ""
 
-    matches = sorted(glob.glob(prefix + "*"))
+    if prefix == "":
+        matches = sorted(os.listdir("."))
+    else:
+        matches = sorted(glob.glob(prefix + "*"))
 
     if state < len(matches):
         match = matches[state]
 
+        # directory → trailing slash, no space
         if os.path.isdir(match):
             return match + "/"
 
+        # file → trailing space
         return match + " "
 
     return None
