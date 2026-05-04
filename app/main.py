@@ -1,8 +1,8 @@
 import sys
 import os
-import readline
 import shlex
 import subprocess
+import readline
 import glob
 
 EXECUTABLES = set()
@@ -82,9 +82,7 @@ def parse_redirection(command_line):
 def completer(text, state):
     buffer = readline.get_line_buffer()
 
-    # -------------------------
-    # COMMAND MODE (ONLY when no space yet)
-    # -------------------------
+    # ---------------- COMMAND MODE ----------------
     if " " not in buffer.strip():
         builtins = ["echo", "exit"]
         executables = EXECUTABLES or []
@@ -98,15 +96,24 @@ def completer(text, state):
             return matches[state] + " "
         return None
 
-    # -------------------------
-    # FILE / DIRECTORY MODE
-    # -------------------------
+    # ---------------- FILE / DIRECTORY MODE ----------------
 
-    # IMPORTANT: ONLY use current word
-    prefix = text
+    # FULL current token (this is CRITICAL)
+    token = text
 
-    entries = os.listdir(".")
+    # Split into directory + prefix
+    dir_name = os.path.dirname(token)
+    prefix = os.path.basename(token)
 
+    # If no directory specified → use current dir
+    search_dir = dir_name if dir_name else "."
+
+    try:
+        entries = os.listdir(search_dir)
+    except FileNotFoundError:
+        return None
+
+    # Filter matches
     matches = sorted(
         e for e in entries
         if e.startswith(prefix)
@@ -117,7 +124,17 @@ def completer(text, state):
 
     match = matches[state]
 
-    return match + ("/" if os.path.isdir(match) else " ")
+    # Rebuild full path
+    if dir_name:
+        full_path = os.path.join(dir_name, match)
+    else:
+        full_path = match
+
+    # Directory → add "/"
+    if os.path.isdir(os.path.join(search_dir, match)):
+        return full_path + "/"
+
+    return full_path + " "
 
 
 def get_executables():
