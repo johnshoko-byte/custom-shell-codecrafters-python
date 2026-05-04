@@ -90,12 +90,19 @@ def completer(text, state):
 
     # ---------------- FILE / DIRECTORY MODE ----------------
 
-    # 🔥 CRITICAL FIX: use text directly (NOT buffer parsing)
-    prefix = text
+    token = text
 
-    # 🔥 CRITICAL FIX: handle empty prefix correctly
-    search_dir = "."
-    entries = os.listdir(search_dir)
+    # 🔥 split into directory + prefix
+    dir_name = os.path.dirname(token)
+    prefix = os.path.basename(token)
+
+    # determine where to search
+    search_dir = dir_name if dir_name else "."
+
+    try:
+        entries = os.listdir(search_dir)
+    except FileNotFoundError:
+        return None
 
     matches = sorted(e for e in entries if e.startswith(prefix))
 
@@ -104,10 +111,14 @@ def completer(text, state):
 
     match = matches[state]
 
-    if os.path.isdir(match):
-        return match + "/"
+    # 🔥 rebuild correct full path
+    full_path = os.path.join(dir_name, match) if dir_name else match
 
-    return match + " "
+    # directory → trailing slash
+    if os.path.isdir(os.path.join(search_dir, match)):
+        return full_path + "/"
+
+    return full_path + " "
 
 
 def get_executables():
