@@ -3,23 +3,18 @@ import os
 import shlex
 import subprocess
 import readline
-import glob
 
 EXECUTABLES = set()
-TAB_COUNT = 0
-LAST_BUFFER = ""
 
 
 def write_output(output, stdout_file=None, stderr_file=None, append_stdout=False):
     mode = 'a' if append_stdout else 'w'
 
-    # Create files
     if stdout_file:
         open(stdout_file, mode).close()
     if stderr_file:
         open(stderr_file, 'w').close()
 
-    # Write stdout
     if stdout_file:
         with open(stdout_file, mode) as f:
             f.write(output + "\n")
@@ -28,7 +23,6 @@ def write_output(output, stdout_file=None, stderr_file=None, append_stdout=False
 
 
 def find_executable(cmd_name):
-    """Find executable in PATH."""
     for directory in os.environ.get("PATH", "").split(":"):
         full_path = os.path.join(directory, cmd_name)
         if os.path.isfile(full_path) and os.access(full_path, os.X_OK):
@@ -50,7 +44,6 @@ def parse_redirection(command_line):
     while i < len(tokens):
         token = tokens[i]
 
-        # --- STDOUT ---
         if token in [">", "1>"]:
             stdout_file = tokens[i + 1]
             append_stdout = False
@@ -61,7 +54,6 @@ def parse_redirection(command_line):
             append_stdout = True
             i += 2
 
-        # --- STDERR ---
         elif token == "2>":
             stderr_file = tokens[i + 1]
             append_stderr = False
@@ -82,8 +74,8 @@ def parse_redirection(command_line):
 def completer(text, state):
     buffer = readline.get_line_buffer()
 
-    # ---------------- COMMAND MODE ----------------
-    if " " not in buffer.strip():
+    # ✅ FIXED: correct command mode detection
+    if " " not in buffer:
         builtins = ["echo", "exit"]
         executables = EXECUTABLES or []
 
@@ -96,16 +88,12 @@ def completer(text, state):
             return matches[state] + " "
         return None
 
-    # ---------------- FILE / DIRECTORY MODE ----------------
-
-    # FULL current token (this is CRITICAL)
+    # FILE / DIRECTORY MODE
     token = text
 
-    # Split into directory + prefix
     dir_name = os.path.dirname(token)
     prefix = os.path.basename(token)
 
-    # If no directory specified → use current dir
     search_dir = dir_name if dir_name else "."
 
     try:
@@ -113,24 +101,15 @@ def completer(text, state):
     except FileNotFoundError:
         return None
 
-    # Filter matches
-    matches = sorted(
-        e for e in entries
-        if e.startswith(prefix)
-    )
+    matches = sorted(e for e in entries if e.startswith(prefix))
 
     if state >= len(matches):
         return None
 
     match = matches[state]
 
-    # Rebuild full path
-    if dir_name:
-        full_path = os.path.join(dir_name, match)
-    else:
-        full_path = match
+    full_path = os.path.join(dir_name, match) if dir_name else match
 
-    # Directory → add "/"
     if os.path.isdir(os.path.join(search_dir, match)):
         return full_path + "/"
 
@@ -163,14 +142,12 @@ def setup_autocomplete():
     readline.set_completer(completer)
     readline.parse_and_bind("tab: complete")
 
+    # correct delimiters
     readline.set_completer_delims("\t\n")
 
 
 def main():
     builtins = ["echo", "exit", "type", "pwd", "cd"]
-
-    readline.set_completer(completer)
-    readline.parse_and_bind("tab: complete")
 
     setup_autocomplete()
 
@@ -191,8 +168,6 @@ def main():
             continue
 
         program = args[0]
-
-        # ---------------- BUILTINS ----------------
 
         if program == "exit":
             break
@@ -227,13 +202,10 @@ def main():
             except FileNotFoundError:
                 error_msg = f"cd: {args[1]}: No such file or directory"
 
-                # FIX: stderr must always go to write_output OR print cleanly
                 if stderr_file:
                     write_output(error_msg, stderr_file)
                 else:
                     print(error_msg)
-
-        # ---------------- EXTERNAL COMMANDS ----------------
 
         else:
             exe_path = find_executable(program)
