@@ -74,7 +74,7 @@ def parse_redirection(command_line):
 def completer(text, state):
     buffer = readline.get_line_buffer()
 
-    # ✅ FIXED: correct command mode detection
+    # ---------------- COMMAND MODE ----------------
     if " " not in buffer:
         builtins = ["echo", "exit"]
         executables = EXECUTABLES or []
@@ -88,18 +88,14 @@ def completer(text, state):
             return matches[state] + " "
         return None
 
-    # FILE / DIRECTORY MODE
-    token = text
+    # ---------------- FILE / DIRECTORY MODE ----------------
 
-    dir_name = os.path.dirname(token)
-    prefix = os.path.basename(token)
+    # 🔥 CRITICAL FIX: use text directly (NOT buffer parsing)
+    prefix = text
 
-    search_dir = dir_name if dir_name else "."
-
-    try:
-        entries = os.listdir(search_dir)
-    except FileNotFoundError:
-        return None
+    # 🔥 CRITICAL FIX: handle empty prefix correctly
+    search_dir = "."
+    entries = os.listdir(search_dir)
 
     matches = sorted(e for e in entries if e.startswith(prefix))
 
@@ -108,12 +104,10 @@ def completer(text, state):
 
     match = matches[state]
 
-    full_path = os.path.join(dir_name, match) if dir_name else match
+    if os.path.isdir(match):
+        return match + "/"
 
-    if os.path.isdir(os.path.join(search_dir, match)):
-        return full_path + "/"
-
-    return full_path + " "
+    return match + " "
 
 
 def get_executables():
@@ -141,9 +135,6 @@ def setup_autocomplete():
 
     readline.set_completer(completer)
     readline.parse_and_bind("tab: complete")
-
-    # correct delimiters
-    readline.set_completer_delims("\t\n")
 
 
 def main():
