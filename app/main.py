@@ -91,10 +91,8 @@ def completer(text, state):
 
     # ---------------- FILE / DIRECTORY COMPLETION ----------------
 
-    # current token after last space
     token = buffer.split(" ")[-1]
 
-    # determine search directory
     if "/" in token:
         search_dir = os.path.dirname(token)
         prefix = os.path.basename(token)
@@ -114,18 +112,16 @@ def completer(text, state):
 
     match = matches[state]
 
-    # rebuild final path correctly
-    if search_dir == ".":
-        full_path = match
-    else:
-        full_path = os.path.join(search_dir, match)
+    # IMPORTANT:
+    # return ONLY the missing part
+    completion = match[len(prefix):]
 
-    # directory completion
+    full_path = os.path.join(search_dir, match)
+
     if os.path.isdir(full_path):
-        return full_path + "/"
+        return completion + "/"
 
-    # file completion
-    return full_path + " "
+    return completion + " "
 
 
 def get_executables():
