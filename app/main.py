@@ -74,16 +74,14 @@ def parse_redirection(command_line):
 
 
 def completer(text, state):
-    global TAB_COUNT, LAST_BUFFER
-
     buffer = readline.get_line_buffer()
 
-    # ---------------- RESET STATE ----------------
+    # ---------------- RESET LOGIC ----------------
+    global LAST_BUFFER
     if buffer != LAST_BUFFER:
-        TAB_COUNT = 0
         LAST_BUFFER = buffer
 
-    parts = buffer.split(" ")
+    parts = buffer.split()
     token = parts[-1] if parts else ""
 
     # ---------------- COMMAND COMPLETION ----------------
@@ -96,40 +94,17 @@ def completer(text, state):
             if cmd.startswith(token)
         )
 
-        # no matches → bell
         if not matches:
             sys.stdout.write("\x07")
             sys.stdout.flush()
             return None
 
-        # multi-match behavior
-        if len(matches) > 1:
-            if TAB_COUNT == 0:
-                TAB_COUNT = 1
-                sys.stdout.write("\x07")
-                sys.stdout.flush()
-                return None
+        if state < len(matches):
+            return matches[state] + " "
 
-            # second TAB → list matches
-            display = []
-            for m in matches:
-                if os.path.isdir(m):
-                    display.append(m + "/")
-                else:
-                    display.append(m)
-
-            print("\n" + "  ".join(display))
-            sys.stdout.write(f"$ {buffer}")
-            sys.stdout.flush()
-            return None
-
-        # single match
-        match = matches[0]
-        return match[len(token):] + " "
+        return None
 
     # ---------------- FILE / DIRECTORY COMPLETION ----------------
-
-    # split path correctly
     if "/" in token:
         search_dir = os.path.dirname(token)
         prefix = os.path.basename(token)
@@ -154,12 +129,13 @@ def completer(text, state):
 
     # ---------------- MULTI MATCH ----------------
     if len(matches) > 1:
-        if TAB_COUNT == 0:
-            TAB_COUNT = 1
+        # first TAB → bell only
+        if state == 0:
             sys.stdout.write("\x07")
             sys.stdout.flush()
             return None
 
+        # second TAB → print options
         display = []
         for m in matches:
             full = os.path.join(search_dir, m)
