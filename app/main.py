@@ -90,13 +90,17 @@ def completer(text, state):
 
     # ---------------- FILE / DIRECTORY MODE ----------------
 
-    token = text
+    buffer = readline.get_line_buffer()
 
-    # 🔥 split into directory + prefix
+    # 🔥 get the current token manually (this fixes everything)
+    parts = buffer.split(" ")
+
+    token = parts[-1] if buffer.endswith(" ") else parts[-1]
+
+    # split into directory + prefix
     dir_name = os.path.dirname(token)
     prefix = os.path.basename(token)
 
-    # determine where to search
     search_dir = dir_name if dir_name else "."
 
     try:
@@ -111,10 +115,9 @@ def completer(text, state):
 
     match = matches[state]
 
-    # 🔥 rebuild correct full path
+    # rebuild full path correctly
     full_path = os.path.join(dir_name, match) if dir_name else match
 
-    # directory → trailing slash
     if os.path.isdir(os.path.join(search_dir, match)):
         return full_path + "/"
 
