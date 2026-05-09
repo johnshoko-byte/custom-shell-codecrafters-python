@@ -77,16 +77,15 @@ def parse_redirection(command_line):
 def completer(text, state):
     buffer = readline.get_line_buffer()
     parts = buffer.split()
-    token = parts[-1] if parts else ""
 
-    # ---------------- COMMAND MODE ----------------
+    # ---------------- COMMAND COMPLETION ----------------
     if len(parts) <= 1:
         builtins = ["echo", "exit"]
         executables = EXECUTABLES or []
 
         matches = sorted(
             cmd for cmd in (builtins + list(executables))
-            if cmd.startswith(token)
+            if cmd.startswith(text)
         )
 
         if not matches:
@@ -98,7 +97,10 @@ def completer(text, state):
             return matches[state] + " "
         return None
 
-    # ---------------- FILE / DIR MODE ----------------
+    # ---------------- FILE / DIRECTORY COMPLETION ----------------
+    token = text  # ✅ CRITICAL FIX (do NOT use parts[-1])
+
+    # split path safely
     if "/" in token:
         search_dir = os.path.dirname(token)
         prefix = os.path.basename(token)
@@ -126,12 +128,11 @@ def completer(text, state):
 
     full_path = os.path.join(search_dir, match)
 
-    # IMPORTANT FIX:
-    # return FULL match, not suffix
+    # directory rule
     if os.path.isdir(full_path):
         return match + "/"
-    else:
-        return match + " "
+
+    return match + " "
 
 
 def get_executables():
