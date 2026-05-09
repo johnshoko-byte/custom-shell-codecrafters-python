@@ -74,37 +74,32 @@ def parse_redirection(command_line):
 
 
 def completer(text, state):
+    global MULTI_TAB_MODE
+
     buffer = readline.get_line_buffer()
-
-    # ---------------- RESET LOGIC ----------------
-    global LAST_BUFFER
-    if buffer != LAST_BUFFER:
-        LAST_BUFFER = buffer
-
     parts = buffer.split()
     token = parts[-1] if parts else ""
 
-    # ---------------- COMMAND COMPLETION ----------------
+    # ---------------- COMMAND MODE ----------------
     if len(parts) <= 1:
         builtins = ["echo", "exit"]
         executables = EXECUTABLES or []
 
-        matches = sorted(
-            cmd for cmd in (builtins + list(executables))
-            if cmd.startswith(token)
-        )
+        matches = sorted(cmd for cmd in (builtins + list(executables))
+                         if cmd.startswith(token))
 
         if not matches:
             sys.stdout.write("\x07")
             sys.stdout.flush()
             return None
 
+        MULTI_TAB_MODE = False  # reset mode
+
         if state < len(matches):
             return matches[state] + " "
-
         return None
 
-    # ---------------- FILE / DIRECTORY COMPLETION ----------------
+    # ---------------- FILE MODE ----------------
     if "/" in token:
         search_dir = os.path.dirname(token)
         prefix = os.path.basename(token)
@@ -129,8 +124,8 @@ def completer(text, state):
 
     # ---------------- MULTI MATCH ----------------
     if len(matches) > 1:
-        # first TAB → bell only
-        if state == 0:
+        if not MULTI_TAB_MODE:
+            MULTI_TAB_MODE = True
             sys.stdout.write("\x07")
             sys.stdout.flush()
             return None
@@ -144,12 +139,14 @@ def completer(text, state):
             else:
                 display.append(m)
 
-        print("\n" + "  ".join(display))
+        print("  ".join(display))
         sys.stdout.write(f"$ {buffer}")
         sys.stdout.flush()
         return None
 
     # ---------------- SINGLE MATCH ----------------
+    MULTI_TAB_MODE = False
+
     match = matches[0]
     full_path = os.path.join(search_dir, match)
 
