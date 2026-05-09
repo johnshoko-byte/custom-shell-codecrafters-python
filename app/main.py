@@ -74,7 +74,7 @@ def parse_redirection(command_line):
 def completer(text, state):
     buffer = readline.get_line_buffer()
 
-    # ---------------- COMMAND MODE ----------------
+    # ---------------- COMMAND COMPLETION ----------------
     if " " not in buffer:
         builtins = ["echo", "exit"]
         executables = EXECUTABLES or []
@@ -86,41 +86,45 @@ def completer(text, state):
 
         if state < len(matches):
             return matches[state] + " "
+
         return None
 
-    # ---------------- FILE / DIRECTORY MODE ----------------
+    # ---------------- FILE / DIRECTORY COMPLETION ----------------
 
-    buffer = readline.get_line_buffer()
+    # current token after last space
+    token = buffer.split(" ")[-1]
 
-    # 🔥 get the current token manually (this fixes everything)
-    parts = buffer.split(" ")
-
-    token = parts[-1] if buffer.endswith(" ") else parts[-1]
-
-    # split into directory + prefix
-    dir_name = os.path.dirname(token)
-    prefix = os.path.basename(token)
-
-    search_dir = dir_name if dir_name else "."
+    # determine search directory
+    if "/" in token:
+        search_dir = os.path.dirname(token)
+        prefix = os.path.basename(token)
+    else:
+        search_dir = "."
+        prefix = token
 
     try:
-        entries = os.listdir(search_dir)
+        entries = sorted(os.listdir(search_dir))
     except FileNotFoundError:
         return None
 
-    matches = sorted(e for e in entries if e.startswith(prefix))
+    matches = [e for e in entries if e.startswith(prefix)]
 
     if state >= len(matches):
         return None
 
     match = matches[state]
 
-    # rebuild full path correctly
-    full_path = os.path.join(dir_name, match) if dir_name else match
+    # rebuild final path correctly
+    if search_dir == ".":
+        full_path = match
+    else:
+        full_path = os.path.join(search_dir, match)
 
-    if os.path.isdir(os.path.join(search_dir, match)):
+    # directory completion
+    if os.path.isdir(full_path):
         return full_path + "/"
 
+    # file completion
     return full_path + " "
 
 
