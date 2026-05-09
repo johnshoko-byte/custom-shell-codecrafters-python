@@ -78,13 +78,58 @@ def completer(text, state):
 
     buffer = readline.get_line_buffer()
 
-    # reset TAB state if user changed input
+    # ---------------- RESET STATE ----------------
     if buffer != LAST_BUFFER:
         TAB_COUNT = 0
         LAST_BUFFER = buffer
 
-    token = buffer.split(" ")[-1]
+    parts = buffer.split(" ")
+    token = parts[-1] if parts else ""
 
+    # ---------------- COMMAND COMPLETION ----------------
+    if len(parts) <= 1:
+        builtins = ["echo", "exit"]
+        executables = EXECUTABLES or []
+
+        matches = sorted(
+            cmd for cmd in (builtins + list(executables))
+            if cmd.startswith(token)
+        )
+
+        # no matches → bell
+        if not matches:
+            sys.stdout.write("\x07")
+            sys.stdout.flush()
+            return None
+
+        # multi-match behavior
+        if len(matches) > 1:
+            if TAB_COUNT == 0:
+                TAB_COUNT = 1
+                sys.stdout.write("\x07")
+                sys.stdout.flush()
+                return None
+
+            # second TAB → list matches
+            display = []
+            for m in matches:
+                if os.path.isdir(m):
+                    display.append(m + "/")
+                else:
+                    display.append(m)
+
+            print("\n" + "  ".join(display))
+            sys.stdout.write(f"$ {buffer}")
+            sys.stdout.flush()
+            return None
+
+        # single match
+        match = matches[0]
+        return match[len(token):] + " "
+
+    # ---------------- FILE / DIRECTORY COMPLETION ----------------
+
+    # split path correctly
     if "/" in token:
         search_dir = os.path.dirname(token)
         prefix = os.path.basename(token)
@@ -93,41 +138,39 @@ def completer(text, state):
         prefix = token
 
     try:
-        entries = sorted(os.listdir(search_dir))
+        entries = os.listdir(search_dir)
     except FileNotFoundError:
+        sys.stdout.write("\x07")
+        sys.stdout.flush()
         return None
 
-    matches = [e for e in entries if e.startswith(prefix)]
+    matches = sorted(e for e in entries if e.startswith(prefix))
 
-    # ---------------- NO MATCHES ----------------
+    # ---------------- NO MATCH ----------------
     if not matches:
         sys.stdout.write("\x07")
         sys.stdout.flush()
         return None
 
-    # ---------------- MULTI MATCH HANDLING ----------------
+    # ---------------- MULTI MATCH ----------------
     if len(matches) > 1:
         if TAB_COUNT == 0:
-            TAB_COUNT += 1
+            TAB_COUNT = 1
             sys.stdout.write("\x07")
             sys.stdout.flush()
             return None
 
-        # 2nd+ TAB → list matches
-        if state == 0:
-            display = []
+        display = []
+        for m in matches:
+            full = os.path.join(search_dir, m)
+            if os.path.isdir(full):
+                display.append(m + "/")
+            else:
+                display.append(m)
 
-            for m in matches:
-                full = os.path.join(search_dir, m)
-                if os.path.isdir(full):
-                    display.append(m + "/")
-                else:
-                    display.append(m)
-
-            print("\n" + "  ".join(display))
-            sys.stdout.write(f"$ {buffer}")
-            sys.stdout.flush()
-
+        print("\n" + "  ".join(display))
+        sys.stdout.write(f"$ {buffer}")
+        sys.stdout.flush()
         return None
 
     # ---------------- SINGLE MATCH ----------------
