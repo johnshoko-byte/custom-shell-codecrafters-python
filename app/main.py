@@ -89,7 +89,7 @@ def completer(text, state):
 
         return None
 
-    # ---------------- FILE / DIRECTORY COMPLETION ----------------
+        # ---------------- FILE / DIRECTORY COMPLETION ----------------
 
     token = buffer.split(" ")[-1]
 
@@ -107,6 +107,12 @@ def completer(text, state):
 
     matches = [e for e in entries if e.startswith(prefix)]
 
+    # 🔥 NEW: NO MATCHES → ring bell
+    if not matches:
+        sys.stdout.write("\x07")
+        sys.stdout.flush()
+        return None
+
     if state >= len(matches):
         return None
 
@@ -114,7 +120,6 @@ def completer(text, state):
 
     full_path = os.path.join(search_dir, match)
 
-    # 🔥 ALWAYS return only missing portion
     completion = match[len(prefix):]
 
     if os.path.isdir(full_path):
