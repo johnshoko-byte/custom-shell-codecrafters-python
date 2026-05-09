@@ -7,6 +7,7 @@ import readline
 EXECUTABLES = set()
 TAB_COUNT = 0
 LAST_BUFFER = ""
+MULTI_MATCH_READY = False
 
 
 def write_output(output, stdout_file=None, stderr_file=None, append_stdout=False):
@@ -74,11 +75,16 @@ def parse_redirection(command_line):
 
 
 def completer(text, state):
-    global MULTI_TAB_MODE
+    global LAST_BUFFER, MULTI_MATCH_READY
 
     buffer = readline.get_line_buffer()
     parts = buffer.split()
     token = parts[-1] if parts else ""
+
+    # ---------------- RESET ON INPUT CHANGE ----------------
+    if buffer != LAST_BUFFER:
+        LAST_BUFFER = buffer
+        MULTI_MATCH_READY = False
 
     # ---------------- COMMAND MODE ----------------
     if len(parts) <= 1:
@@ -92,8 +98,6 @@ def completer(text, state):
             sys.stdout.write("\x07")
             sys.stdout.flush()
             return None
-
-        MULTI_TAB_MODE = False  # reset mode
 
         if state < len(matches):
             return matches[state] + " "
@@ -124,13 +128,15 @@ def completer(text, state):
 
     # ---------------- MULTI MATCH ----------------
     if len(matches) > 1:
-        if not MULTI_TAB_MODE:
-            MULTI_TAB_MODE = True
+
+        # FIRST TAB → bell only
+        if not MULTI_MATCH_READY:
+            MULTI_MATCH_READY = True
             sys.stdout.write("\x07")
             sys.stdout.flush()
             return None
 
-        # second TAB → print options
+        # SECOND TAB → print matches
         display = []
         for m in matches:
             full = os.path.join(search_dir, m)
@@ -145,8 +151,6 @@ def completer(text, state):
         return None
 
     # ---------------- SINGLE MATCH ----------------
-    MULTI_TAB_MODE = False
-
     match = matches[0]
     full_path = os.path.join(search_dir, match)
 
