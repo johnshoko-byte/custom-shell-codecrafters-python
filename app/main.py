@@ -84,8 +84,10 @@ def completer(text, state):
         builtins = ["echo", "exit"]
         executables = EXECUTABLES or []
 
-        matches = sorted(cmd for cmd in (builtins + list(executables))
-                         if cmd.startswith(token))
+        matches = sorted(
+            cmd for cmd in (builtins + list(executables))
+            if cmd.startswith(token)
+        )
 
         if not matches:
             sys.stdout.write("\x07")
@@ -96,7 +98,7 @@ def completer(text, state):
             return matches[state] + " "
         return None
 
-    # ---------------- FILE MODE ----------------
+    # ---------------- FILE / DIR MODE ----------------
     if "/" in token:
         search_dir = os.path.dirname(token)
         prefix = os.path.basename(token)
@@ -113,27 +115,23 @@ def completer(text, state):
 
     matches = sorted(e for e in entries if e.startswith(prefix))
 
-    # ---------------- NO MATCH ----------------
     if not matches:
         sys.stdout.write("\x07")
         sys.stdout.flush()
         return None
 
-    # ---------------- RETURN MATCHES (IMPORTANT) ----------------
     match = matches[state] if state < len(matches) else None
-
     if not match:
         return None
 
     full_path = os.path.join(search_dir, match)
 
-    # return ONLY suffix
-    completion = match[len(prefix):]
-
+    # IMPORTANT FIX:
+    # return FULL match, not suffix
     if os.path.isdir(full_path):
-        return completion + "/"
-
-    return completion + " "
+        return match + "/"
+    else:
+        return match + " "
 
 
 def get_executables():
