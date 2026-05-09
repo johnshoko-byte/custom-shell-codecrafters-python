@@ -75,16 +75,9 @@ def parse_redirection(command_line):
 
 
 def completer(text, state):
-    global LAST_BUFFER, MULTI_MATCH_READY
-
     buffer = readline.get_line_buffer()
     parts = buffer.split()
     token = parts[-1] if parts else ""
-
-    # ---------------- RESET ON INPUT CHANGE ----------------
-    if buffer != LAST_BUFFER:
-        LAST_BUFFER = buffer
-        MULTI_MATCH_READY = False
 
     # ---------------- COMMAND MODE ----------------
     if len(parts) <= 1:
@@ -126,33 +119,15 @@ def completer(text, state):
         sys.stdout.flush()
         return None
 
-    # ---------------- MULTI MATCH ----------------
-    if len(matches) > 1:
+    # ---------------- RETURN MATCHES (IMPORTANT) ----------------
+    match = matches[state] if state < len(matches) else None
 
-        # FIRST CALL → bell
-        if state == 0:
-            sys.stdout.write("\x07")
-            sys.stdout.flush()
-            return None
-
-        # SECOND CALL → print list
-        display = []
-        for m in matches:
-            full = os.path.join(search_dir, m)
-            if os.path.isdir(full):
-                display.append(m + "/")
-            else:
-                display.append(m)
-
-        print("  ".join(display))
-        sys.stdout.write(f"$ {buffer}")
-        sys.stdout.flush()
+    if not match:
         return None
 
-    # ---------------- SINGLE MATCH ----------------
-    match = matches[0]
     full_path = os.path.join(search_dir, match)
 
+    # return ONLY suffix
     completion = match[len(prefix):]
 
     if os.path.isdir(full_path):
