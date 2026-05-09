@@ -114,9 +114,14 @@ def completer(text, state):
 
     # IMPORTANT:
     # return ONLY the missing part
-    completion = match[len(prefix):]
-
     full_path = os.path.join(search_dir, match)
+
+    # if we're inside a nested path,
+    # only return missing portion
+    if "/" in token:
+        completion = match[len(prefix):]
+    else:
+        completion = match
 
     if os.path.isdir(full_path):
         return completion + "/"
