@@ -5,6 +5,8 @@ import subprocess
 import readline
 
 EXECUTABLES = set()
+TAB_COUNT = 0
+LAST_BUFFER = ""
 
 
 def write_output(output, stdout_file=None, stderr_file=None, append_stdout=False):
@@ -72,24 +74,14 @@ def parse_redirection(command_line):
 
 
 def completer(text, state):
+    global TAB_COUNT, LAST_BUFFER
+
     buffer = readline.get_line_buffer()
 
-    # ---------------- COMMAND COMPLETION ----------------
-    if " " not in buffer:
-        builtins = ["echo", "exit"]
-        executables = EXECUTABLES or []
-
-        matches = sorted(
-            cmd for cmd in (builtins + list(executables))
-            if cmd.startswith(text)
-        )
-
-        if state < len(matches):
-            return matches[state] + " "
-
-        return None
-
-        # ---------------- FILE / DIRECTORY COMPLETION ----------------
+    # reset TAB state if user changed input
+    if buffer != LAST_BUFFER:
+        TAB_COUNT = 0
+        LAST_BUFFER = buffer
 
     token = buffer.split(" ")[-1]
 
@@ -107,17 +99,39 @@ def completer(text, state):
 
     matches = [e for e in entries if e.startswith(prefix)]
 
-    # 🔥 NEW: NO MATCHES → ring bell
+    # ---------------- NO MATCHES ----------------
     if not matches:
         sys.stdout.write("\x07")
         sys.stdout.flush()
         return None
 
-    if state >= len(matches):
+    # ---------------- MULTI MATCH HANDLING ----------------
+    if len(matches) > 1:
+        if TAB_COUNT == 0:
+            TAB_COUNT += 1
+            sys.stdout.write("\x07")
+            sys.stdout.flush()
+            return None
+
+        # 2nd+ TAB → list matches
+        if state == 0:
+            display = []
+
+            for m in matches:
+                full = os.path.join(search_dir, m)
+                if os.path.isdir(full):
+                    display.append(m + "/")
+                else:
+                    display.append(m)
+
+            print("\n" + "  ".join(display))
+            sys.stdout.write(f"$ {buffer}")
+            sys.stdout.flush()
+
         return None
 
-    match = matches[state]
-
+    # ---------------- SINGLE MATCH ----------------
+    match = matches[0]
     full_path = os.path.join(search_dir, match)
 
     completion = match[len(prefix):]
