@@ -1,34 +1,38 @@
-[![progress-banner](https://backend.codecrafters.io/progress/shell/3fa8fb23-a528-4473-ba29-13bc234a339f)](https://app.codecrafters.io/users/codecrafters-bot?r=2qF)
+#  Custom Shell (Python)
 
-This is a starting point for Python solutions to the
-["Build Your Own Shell" Challenge](https://app.codecrafters.io/courses/shell/overview).
+A POSIX-like shell built from scratch in Python as part of the Codecrafters "Build Your Own Shell" challenge.
 
-In this challenge, you'll build your own POSIX compliant shell that's capable of
-interpreting shell commands, running external programs and builtin commands like
-cd, pwd, echo and more. Along the way, you'll learn about shell command parsing,
-REPLs, builtin commands, and more.
+This project simulates a real Unix shell, including command execution, built-in commands, and advanced tab completion behavior.
 
-**Note**: If you're viewing this repo on GitHub, head over to
-[codecrafters.io](https://codecrafters.io) to try the challenge.
+---
 
-# Passing the first stage
+##  Features
 
-The entry point for your `shell` implementation is in `app/main.py`. Study and
-uncomment the relevant code, then run the command below to execute the tests on
-our servers:
+- Execute external programs using `PATH`
+- Built-in commands:
+  - `cd`
+  - `pwd`
+  - `echo`
+  - `type`
+  - `exit`
+- File and directory tab completion
+- Nested path completion (e.g. `dir/subdir/file`)
+- Multiple match handling with tab completion UI
+- Bell feedback (`\x07`) for invalid or ambiguous input
+- Basic output redirection support (`>`, `>>`, `2>`, `2>>`)
 
-```sh
-codecrafters submit
-```
+---
 
-Time to move on to the next stage!
+## Example Usage
 
-# Stage 2 & beyond
+```bash
+$ echo hello world
+hello world
 
-Note: This section is for stages 2 and beyond.
+$ pwd
+/home/user
 
-1. Ensure you have `uv` installed locally
-1. Run `./your_program.sh` to run your program, which is implemented in
-   `app/main.py`.
-1. Run `codecrafters submit` to submit your solution to CodeCrafters. Test
-   output will be streamed to your terminal.
+$ cd project/
+
+$ ls doc<TAB>
+$ ls documents/
