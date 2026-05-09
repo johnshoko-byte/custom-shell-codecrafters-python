@@ -128,15 +128,11 @@ def completer(text, state):
 
     # ---------------- MULTI MATCH ----------------
     if len(matches) > 1:
-
-        # FIRST TAB → bell only, NO return string
-        if not MULTI_MATCH_READY:
-            MULTI_MATCH_READY = True
+        if state == 0:
             sys.stdout.write("\x07")
             sys.stdout.flush()
             return None
 
-        # SECOND TAB → print ONLY, DO NOT return anything
         display = []
         for m in matches:
             full = os.path.join(search_dir, m)
@@ -146,17 +142,16 @@ def completer(text, state):
                 display.append(m)
 
         print("  ".join(display))
-
-        # IMPORTANT: restore original input line ONLY
         sys.stdout.write(f"$ {buffer}")
         sys.stdout.flush()
-
-        return None   # 🔥 CRITICAL FIX
+        return None
 
     # ---------------- SINGLE MATCH ----------------
     match = matches[0]
+
     full_path = os.path.join(search_dir, match)
 
+    # 🔥 CRITICAL FIX: ONLY RETURN SUFFIX (NOT FULL PATH)
     completion = match[len(prefix):]
 
     if os.path.isdir(full_path):
