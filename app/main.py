@@ -173,6 +173,8 @@ def setup_autocomplete():
     readline.set_completer(completer)
     readline.parse_and_bind("tab: complete")
 
+    readline.set_completer_delims(" \t\n")
+
 
 def main():
     builtins = ["echo", "exit", "type", "pwd", "cd"]
