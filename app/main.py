@@ -98,15 +98,15 @@ def completer(text, state):
         return None
 
     # ---------------- FILE / DIRECTORY COMPLETION ----------------
-    token = text  # ✅ CRITICAL FIX (do NOT use parts[-1])
+    token = text
 
-    # split path safely
-    if "/" in token:
-        search_dir = os.path.dirname(token)
-        prefix = os.path.basename(token)
+    # determine search directory + prefix
+    if token.endswith("/"):
+        search_dir = token.rstrip("/")
+        prefix = ""
     else:
-        search_dir = "."
-        prefix = token
+        search_dir = os.path.dirname(token) or "."
+        prefix = os.path.basename(token)
 
     try:
         entries = os.listdir(search_dir)
@@ -115,24 +115,31 @@ def completer(text, state):
         sys.stdout.flush()
         return None
 
-    matches = sorted(e for e in entries if e.startswith(prefix))
+    matches = sorted(
+        e for e in entries
+        if e.startswith(prefix)
+    )
 
     if not matches:
         sys.stdout.write("\x07")
         sys.stdout.flush()
         return None
 
-    match = matches[state] if state < len(matches) else None
-    if not match:
+    if state >= len(matches):
         return None
 
-    full_path = os.path.join(search_dir, match)
+    match = matches[state]
 
-    # directory rule
-    if os.path.isdir(full_path):
-        return match + "/"
+    # FULL PATH REBUILD
+    if search_dir == ".":
+        completed = match
+    else:
+        completed = os.path.join(search_dir, match)
 
-    return match + " "
+    if os.path.isdir(os.path.join(search_dir, match)):
+        return completed + "/"
+
+    return completed + " "
 
 
 def get_executables():
