@@ -100,25 +100,26 @@ def completer(text, state):
     # ---------------- FILE / DIRECTORY COMPLETION ----------------
     token = text
 
-    # determine search directory + prefix
+    # CASE 1: token ends with /
+    # example: pig/
     if token.endswith("/"):
-        search_dir = token.rstrip("/")
+        search_dir = token[:-1]
         prefix = ""
     else:
-        search_dir = os.path.dirname(token) or "."
+        search_dir = os.path.dirname(token)
         prefix = os.path.basename(token)
 
+    if search_dir == "":
+        search_dir = "."
+
     try:
-        entries = os.listdir(search_dir)
+        entries = sorted(os.listdir(search_dir))
     except FileNotFoundError:
         sys.stdout.write("\x07")
         sys.stdout.flush()
         return None
 
-    matches = sorted(
-        e for e in entries
-        if e.startswith(prefix)
-    )
+    matches = [e for e in entries if e.startswith(prefix)]
 
     if not matches:
         sys.stdout.write("\x07")
@@ -130,15 +131,19 @@ def completer(text, state):
 
     match = matches[state]
 
-    # FULL PATH REBUILD
+    # rebuild proper completed path
     if search_dir == ".":
         completed = match
     else:
         completed = os.path.join(search_dir, match)
 
-    if os.path.isdir(os.path.join(search_dir, match)):
+    full_match_path = os.path.join(search_dir, match)
+
+    # directory
+    if os.path.isdir(full_match_path):
         return completed + "/"
 
+    # file
     return completed + " "
 
 
