@@ -79,7 +79,7 @@ def completer(text, state):
     parts = buffer.split()
 
     # ---------------- COMMAND COMPLETION ----------------
-    if len(parts) <= 1:
+    if len(parts) <= 1 and not buffer.endswith(" "):
         builtins = ["echo", "exit"]
         executables = EXECUTABLES or []
 
