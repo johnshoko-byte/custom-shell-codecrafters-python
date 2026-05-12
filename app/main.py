@@ -8,6 +8,7 @@ EXECUTABLES = set()
 TAB_COUNT = 0
 LAST_BUFFER = ""
 MULTI_MATCH_READY = False
+JOBS = []
 JOB_NUMBER = 1
 
 
@@ -185,6 +186,9 @@ def main():
     while True:
         try:
             command_line = input("$ ")
+
+            original_command = command_line
+
         except EOFError:
             break
 
@@ -248,7 +252,8 @@ def main():
                     print(error_msg)
 
         elif program == "jobs":
-            pass
+            for job in JOBS:
+                print(f"[{job['id']}]+  {'Running':<24}{job['command']}")
 
         else:
             global JOB_NUMBER
@@ -279,6 +284,13 @@ def main():
                     )
 
                     print(f"[{JOB_NUMBER}] {process.pid}")
+
+                    JOBS.append({
+                        "id": JOB_NUMBER,
+                        "pid": process.pid,
+                        "command": original_command,
+                        "status": "Running"
+                    })
 
                     JOB_NUMBER += 1
 
