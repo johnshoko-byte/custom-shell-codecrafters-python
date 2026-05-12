@@ -252,8 +252,23 @@ def main():
                     print(error_msg)
 
         elif program == "jobs":
-            for job in JOBS:
-                print(f"[{job['id']}]+  {'Running':<24}{job['command']}")
+            total_jobs = len(JOBS)
+
+            for index, job in enumerate(JOBS):
+
+                # markers
+                if index == total_jobs - 1:
+                    marker = "+"
+                elif index == total_jobs - 2:
+                    marker = "-"
+                else:
+                    marker = " "
+
+                print(
+                    f"[{job['id']}]{marker}  "
+                    f"{'Running':<24}"
+                    f"{job['command']}"
+                )
 
         else:
             global JOB_NUMBER
