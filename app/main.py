@@ -177,7 +177,7 @@ def setup_autocomplete():
 
 
 def main():
-    builtins = ["echo", "exit", "type", "pwd", "cd"]
+    builtins = ["echo", "exit", "type", "pwd", "cd", "jobs"]
 
     setup_autocomplete()
 
@@ -236,6 +236,9 @@ def main():
                     write_output(error_msg, stderr_file)
                 else:
                     print(error_msg)
+
+        elif program == "jobs":
+            pass
 
         else:
             exe_path = find_executable(program)
