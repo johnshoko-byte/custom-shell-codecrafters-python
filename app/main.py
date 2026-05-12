@@ -8,6 +8,7 @@ EXECUTABLES = set()
 TAB_COUNT = 0
 LAST_BUFFER = ""
 MULTI_MATCH_READY = False
+JOB_NUMBER = 1
 
 
 def write_output(output, stdout_file=None, stderr_file=None, append_stdout=False):
@@ -197,6 +198,15 @@ def main():
         if not args:
             continue
 
+        background = False
+
+        if args[-1] == "&":
+            background = True
+            args = args[:-1]
+
+            if not args:
+                continue
+
         program = args[0]
 
         if program == "exit":
@@ -241,6 +251,8 @@ def main():
             pass
 
         else:
+            global JOB_NUMBER
+
             exe_path = find_executable(program)
 
             if not exe_path:
@@ -253,18 +265,35 @@ def main():
 
                 stdout_f = open(
                     stdout_file, stdout_mode) if stdout_file else None
+
                 stderr_f = open(
                     stderr_file, stderr_mode) if stderr_file else None
 
-                subprocess.run(
-                    [program] + args[1:],
-                    executable=exe_path,
-                    stdout=stdout_f,
-                    stderr=stderr_f
-                )
+                # BACKGROUND PROCESS
+                if background:
+                    process = subprocess.Popen(
+                        [program] + args[1:],
+                        executable=exe_path,
+                        stdout=stdout_f,
+                        stderr=stderr_f
+                    )
+
+                    print(f"[{JOB_NUMBER}] {process.pid}")
+
+                    JOB_NUMBER += 1
+
+                # FOREGROUND PROCESS
+                else:
+                    subprocess.run(
+                        [program] + args[1:],
+                        executable=exe_path,
+                        stdout=stdout_f,
+                        stderr=stderr_f
+                    )
 
                 if stdout_f:
                     stdout_f.close()
+
                 if stderr_f:
                     stderr_f.close()
 
