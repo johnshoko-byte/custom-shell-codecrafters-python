@@ -293,14 +293,27 @@ def main():
 
         elif program == "jobs":
 
-            # first reap completed jobs
-            reap_jobs()
+            jobs_to_remove = []
 
             total_jobs = len(JOBS)
 
             for index, job in enumerate(JOBS):
 
-                # markers
+                # ---------- STATUS ----------
+                if job["process"].poll() is None:
+                    status = "Running"
+                    command = job["command"]
+                else:
+                    status = "Done"
+
+                    command = job["command"].rstrip()
+
+                    if command.endswith("&"):
+                        command = command[:-1].rstrip()
+
+                    jobs_to_remove.append(job)
+
+                # ---------- MARKERS ----------
                 if index == total_jobs - 1:
                     marker = "+"
                 elif index == total_jobs - 2:
@@ -310,9 +323,13 @@ def main():
 
                 print(
                     f"[{job['id']}]{marker}  "
-                    f"{'Running':<24}"
-                    f"{job['command']}"
+                    f"{status:<24}"
+                    f"{command}"
                 )
+
+            # remove done jobs AFTER printing everything
+            for job in jobs_to_remove:
+                JOBS.remove(job)
 
         else:
             global JOB_NUMBER
