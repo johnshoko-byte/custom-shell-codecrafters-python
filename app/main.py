@@ -252,11 +252,28 @@ def main():
                     print(error_msg)
 
         elif program == "jobs":
+
+            jobs_to_remove = []
+
             total_jobs = len(JOBS)
 
             for index, job in enumerate(JOBS):
 
-                # markers
+                # ---------- CHECK PROCESS STATUS ----------
+                if job["process"].poll() is None:
+                    status = "Running"
+                    command = job["command"]
+                else:
+                    status = "Done"
+
+                    # remove trailing &
+                    command = job["command"].rstrip()
+                    if command.endswith("&"):
+                        command = command[:-1].rstrip()
+
+                    jobs_to_remove.append(job)
+
+                # ---------- JOB MARKERS ----------
                 if index == total_jobs - 1:
                     marker = "+"
                 elif index == total_jobs - 2:
@@ -266,9 +283,13 @@ def main():
 
                 print(
                     f"[{job['id']}]{marker}  "
-                    f"{'Running':<24}"
-                    f"{job['command']}"
+                    f"{status:<24}"
+                    f"{command}"
                 )
+
+            # remove completed jobs AFTER printing
+            for job in jobs_to_remove:
+                JOBS.remove(job)
 
         else:
             global JOB_NUMBER
@@ -303,8 +324,8 @@ def main():
                     JOBS.append({
                         "id": JOB_NUMBER,
                         "pid": process.pid,
-                        "command": original_command,
-                        "status": "Running"
+                        "process": process,
+                        "command": original_command
                     })
 
                     JOB_NUMBER += 1
