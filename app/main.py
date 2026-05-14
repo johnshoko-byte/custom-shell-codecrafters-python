@@ -5,11 +5,8 @@ import subprocess
 import readline
 
 EXECUTABLES = set()
-TAB_COUNT = 0
-LAST_BUFFER = ""
-MULTI_MATCH_READY = False
+
 JOBS = []
-JOB_NUMBER = 1
 
 
 def write_output(output, stdout_file=None, stderr_file=None, append_stdout=False):
@@ -17,6 +14,7 @@ def write_output(output, stdout_file=None, stderr_file=None, append_stdout=False
 
     if stdout_file:
         open(stdout_file, mode).close()
+
     if stderr_file:
         open(stderr_file, 'w').close()
 
@@ -30,8 +28,10 @@ def write_output(output, stdout_file=None, stderr_file=None, append_stdout=False
 def find_executable(cmd_name):
     for directory in os.environ.get("PATH", "").split(":"):
         full_path = os.path.join(directory, cmd_name)
+
         if os.path.isfile(full_path) and os.access(full_path, os.X_OK):
             return full_path
+
     return None
 
 
@@ -40,12 +40,14 @@ def parse_redirection(command_line):
 
     stdout_file = None
     stderr_file = None
+
     append_stdout = False
     append_stderr = False
 
     clean_tokens = []
 
     i = 0
+
     while i < len(tokens):
         token = tokens[i]
 
@@ -81,12 +83,13 @@ def completer(text, state):
     parts = buffer.split()
 
     # ---------------- COMMAND COMPLETION ----------------
+
     if len(parts) <= 1 and not buffer.endswith(" "):
-        builtins = ["echo", "exit"]
-        executables = EXECUTABLES or []
+
+        builtins = ["echo", "exit", "type", "pwd", "cd", "jobs"]
 
         matches = sorted(
-            cmd for cmd in (builtins + list(executables))
+            cmd for cmd in (builtins + list(EXECUTABLES))
             if cmd.startswith(text)
         )
 
@@ -97,13 +100,13 @@ def completer(text, state):
 
         if state < len(matches):
             return matches[state] + " "
+
         return None
 
     # ---------------- FILE / DIRECTORY COMPLETION ----------------
+
     token = text
 
-    # CASE 1: token ends with /
-    # example: pig/
     if token.endswith("/"):
         search_dir = token[:-1]
         prefix = ""
@@ -133,7 +136,6 @@ def completer(text, state):
 
     match = matches[state]
 
-    # rebuild proper completed path
     if search_dir == ".":
         completed = match
     else:
@@ -141,11 +143,9 @@ def completer(text, state):
 
     full_match_path = os.path.join(search_dir, match)
 
-    # directory
     if os.path.isdir(full_match_path):
         return completed + "/"
 
-    # file
     return completed + " "
 
 
@@ -153,14 +153,18 @@ def get_executables():
     executables = set()
 
     for directory in os.environ.get("PATH", "").split(":"):
+
         if not os.path.isdir(directory):
             continue
 
         try:
             for file in os.listdir(directory):
+
                 full_path = os.path.join(directory, file)
+
                 if os.path.isfile(full_path) and os.access(full_path, os.X_OK):
                     executables.add(file)
+
         except PermissionError:
             continue
 
@@ -175,11 +179,24 @@ def setup_autocomplete():
     readline.set_completer(completer)
     readline.parse_and_bind("tab: complete")
 
-    readline.set_completer_delims(" \t\n")
+
+def get_next_job_number():
+
+    used_numbers = sorted(job["id"] for job in JOBS)
+
+    job_number = 1
+
+    for number in used_numbers:
+
+        if number == job_number:
+            job_number += 1
+        else:
+            break
+
+    return job_number
 
 
 def reap_jobs():
-    global JOBS
 
     jobs_to_remove = []
 
@@ -187,10 +204,8 @@ def reap_jobs():
 
     for index, job in enumerate(JOBS):
 
-        # process finished
         if job["process"].poll() is not None:
 
-            # markers
             if index == total_jobs - 1:
                 marker = "+"
             elif index == total_jobs - 2:
@@ -198,7 +213,6 @@ def reap_jobs():
             else:
                 marker = " "
 
-            # remove trailing &
             command = job["command"].rstrip()
 
             if command.endswith("&"):
@@ -212,42 +226,32 @@ def reap_jobs():
 
             jobs_to_remove.append(job)
 
-    # remove AFTER printing
     for job in jobs_to_remove:
         JOBS.remove(job)
 
 
-def get_next_job_number():
-    used_numbers = sorted(job["id"] for job in JOBS)
-
-    job_number = 1
-
-    for number in used_numbers:
-        if number == job_number:
-            job_number += 1
-        else:
-            break
-
-    return job_number
-
-
 def main():
+
     builtins = ["echo", "exit", "type", "pwd", "cd", "jobs"]
 
     setup_autocomplete()
 
     while True:
+
         try:
             reap_jobs()
             command_line = input("$ ")
-
-            original_command = command_line
 
         except EOFError:
             break
 
         if not command_line:
             continue
+
+        background = False
+
+        if command_line.rstrip().endswith("&"):
+            background = True
 
         args, stdout_file, stderr_file, append_stdout, append_stderr = parse_redirection(
             command_line
@@ -256,48 +260,56 @@ def main():
         if not args:
             continue
 
-        background = False
-
         if args[-1] == "&":
-            background = True
-            args = args[:-1]
-
-            if not args:
-                continue
+            args.pop()
 
         program = args[0]
+
+        # ---------------- BUILTINS ----------------
 
         if program == "exit":
             break
 
         elif program == "echo":
+
             output = " ".join(args[1:])
-            write_output(output, stdout_file, stderr_file, append_stdout)
+
+            write_output(output, stdout_file,
+                         stderr_file, append_stdout)
 
         elif program == "pwd":
+
             write_output(os.getcwd(), stdout_file, stderr_file)
 
         elif program == "type":
+
             cmd = args[1] if len(args) > 1 else ""
 
             if cmd in builtins:
                 output = f"{cmd} is a shell builtin"
+
             else:
                 path = find_executable(cmd)
+
                 if path:
                     output = f"{cmd} is {path}"
                 else:
                     output = f"{cmd}: not found"
 
-            write_output(output, stdout_file, stderr_file, append_stdout)
+            write_output(output, stdout_file,
+                         stderr_file, append_stdout)
 
         elif program == "cd":
-            target = os.path.expanduser(args[1]) if len(
-                args) > 1 else os.path.expanduser("~")
+
+            target = os.path.expanduser(
+                args[1]
+            ) if len(args) > 1 else os.path.expanduser("~")
 
             try:
                 os.chdir(target)
+
             except FileNotFoundError:
+
                 error_msg = f"cd: {args[1]}: No such file or directory"
 
                 if stderr_file:
@@ -313,10 +325,10 @@ def main():
 
             for index, job in enumerate(JOBS):
 
-                # ---------- STATUS ----------
                 if job["process"].poll() is None:
                     status = "Running"
                     command = job["command"]
+
                 else:
                     status = "Done"
 
@@ -327,7 +339,6 @@ def main():
 
                     jobs_to_remove.append(job)
 
-                # ---------- MARKERS ----------
                 if index == total_jobs - 1:
                     marker = "+"
                 elif index == total_jobs - 2:
@@ -341,12 +352,12 @@ def main():
                     f"{command}"
                 )
 
-            # remove done jobs AFTER printing everything
             for job in jobs_to_remove:
                 JOBS.remove(job)
 
+        # ---------------- EXTERNAL COMMANDS ----------------
+
         else:
-            global JOB_NUMBER
 
             exe_path = find_executable(program)
 
@@ -355,17 +366,24 @@ def main():
                 continue
 
             try:
+
                 stdout_mode = 'a' if append_stdout else 'w'
                 stderr_mode = 'a' if append_stderr else 'w'
 
                 stdout_f = open(
-                    stdout_file, stdout_mode) if stdout_file else None
+                    stdout_file, stdout_mode
+                ) if stdout_file else None
 
                 stderr_f = open(
-                    stderr_file, stderr_mode) if stderr_file else None
+                    stderr_file, stderr_mode
+                ) if stderr_file else None
 
-                # BACKGROUND PROCESS
+                # ---------- BACKGROUND ----------
+
                 if background:
+
+                    job_number = get_next_job_number()
+
                     process = subprocess.Popen(
                         [program] + args[1:],
                         executable=exe_path,
@@ -373,26 +391,19 @@ def main():
                         stderr=stderr_f
                     )
 
-                    print(f"[{job_number}] {process.pid}")
-
-                    JOBS.append({
-                        "id": JOB_NUMBER,
-                        "pid": process.pid,
-                        "process": process,
-                        "command": original_command
-                    })
-
-                    job_number = get_next_job_number()
-
                     JOBS.append({
                         "id": job_number,
                         "pid": process.pid,
                         "process": process,
-                        "command": original_command
+                        "command": command_line
                     })
 
-                # FOREGROUND PROCESS
+                    print(f"[{job_number}] {process.pid}")
+
+                # ---------- FOREGROUND ----------
+
                 else:
+
                     subprocess.run(
                         [program] + args[1:],
                         executable=exe_path,
