@@ -217,6 +217,20 @@ def reap_jobs():
         JOBS.remove(job)
 
 
+def get_next_job_number():
+    used_numbers = sorted(job["id"] for job in JOBS)
+
+    job_number = 1
+
+    for number in used_numbers:
+        if number == job_number:
+            job_number += 1
+        else:
+            break
+
+    return job_number
+
+
 def main():
     builtins = ["echo", "exit", "type", "pwd", "cd", "jobs"]
 
@@ -359,7 +373,7 @@ def main():
                         stderr=stderr_f
                     )
 
-                    print(f"[{JOB_NUMBER}] {process.pid}")
+                    print(f"[{job_number}] {process.pid}")
 
                     JOBS.append({
                         "id": JOB_NUMBER,
@@ -368,7 +382,14 @@ def main():
                         "command": original_command
                     })
 
-                    JOB_NUMBER += 1
+                    job_number = get_next_job_number()
+
+                    JOBS.append({
+                        "id": job_number,
+                        "pid": process.pid,
+                        "process": process,
+                        "command": original_command
+                    })
 
                 # FOREGROUND PROCESS
                 else:
