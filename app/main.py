@@ -82,10 +82,13 @@ def completer(text, state):
     buffer = readline.get_line_buffer()
     parts = buffer.split()
 
+    if not parts:
+        return None
+
+    token = parts[-1]
+
     # ---------------- COMMAND COMPLETION ----------------
-
-    if len(parts) <= 1 and not buffer.endswith(" "):
-
+    if len(parts) == 1 and not buffer.endswith(" "):
         builtins = ["echo", "exit", "type", "pwd", "cd", "jobs"]
 
         matches = sorted(
@@ -94,40 +97,34 @@ def completer(text, state):
         )
 
         if not matches:
-            sys.stdout.write("\x07")
+            sys.stdout.write("\a")
             sys.stdout.flush()
             return None
 
         if state < len(matches):
             return matches[state] + " "
-
         return None
 
     # ---------------- FILE / DIRECTORY COMPLETION ----------------
-
-    token = text
-
-    if token.endswith("/"):
-        search_dir = token[:-1]
-        prefix = ""
+    if "/" in token:
+        search_dir, prefix = token.rsplit("/", 1)
+        if search_dir == "":
+            search_dir = "."
     else:
-        search_dir = os.path.dirname(token)
-        prefix = os.path.basename(token)
-
-    if search_dir == "":
         search_dir = "."
+        prefix = token
 
     try:
         entries = sorted(os.listdir(search_dir))
     except FileNotFoundError:
-        sys.stdout.write("\x07")
+        sys.stdout.write("\a")
         sys.stdout.flush()
         return None
 
     matches = [e for e in entries if e.startswith(prefix)]
 
     if not matches:
-        sys.stdout.write("\x07")
+        sys.stdout.write("\a")
         sys.stdout.flush()
         return None
 
@@ -136,14 +133,15 @@ def completer(text, state):
 
     match = matches[state]
 
+    # ---------------- FIX: IMPORTANT PART ----------------
     if search_dir == ".":
         completed = match
     else:
-        completed = os.path.join(search_dir, match)
+        completed = search_dir + "/" + match
 
-    full_match_path = os.path.join(search_dir, match)
+    full_path = os.path.join(search_dir, match)
 
-    if os.path.isdir(full_match_path):
+    if os.path.isdir(full_path):
         return completed + "/"
 
     return completed + " "
