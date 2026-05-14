@@ -178,6 +178,45 @@ def setup_autocomplete():
     readline.set_completer_delims(" \t\n")
 
 
+def reap_jobs():
+    global JOBS
+
+    jobs_to_remove = []
+
+    total_jobs = len(JOBS)
+
+    for index, job in enumerate(JOBS):
+
+        # process finished
+        if job["process"].poll() is not None:
+
+            # markers
+            if index == total_jobs - 1:
+                marker = "+"
+            elif index == total_jobs - 2:
+                marker = "-"
+            else:
+                marker = " "
+
+            # remove trailing &
+            command = job["command"].rstrip()
+
+            if command.endswith("&"):
+                command = command[:-1].rstrip()
+
+            print(
+                f"[{job['id']}]{marker}  "
+                f"{'Done':<24}"
+                f"{command}"
+            )
+
+            jobs_to_remove.append(job)
+
+    # remove AFTER printing
+    for job in jobs_to_remove:
+        JOBS.remove(job)
+
+
 def main():
     builtins = ["echo", "exit", "type", "pwd", "cd", "jobs"]
 
@@ -185,6 +224,7 @@ def main():
 
     while True:
         try:
+            reap_jobs()
             command_line = input("$ ")
 
             original_command = command_line
@@ -253,27 +293,14 @@ def main():
 
         elif program == "jobs":
 
-            jobs_to_remove = []
+            # first reap completed jobs
+            reap_jobs()
 
             total_jobs = len(JOBS)
 
             for index, job in enumerate(JOBS):
 
-                # ---------- CHECK PROCESS STATUS ----------
-                if job["process"].poll() is None:
-                    status = "Running"
-                    command = job["command"]
-                else:
-                    status = "Done"
-
-                    # remove trailing &
-                    command = job["command"].rstrip()
-                    if command.endswith("&"):
-                        command = command[:-1].rstrip()
-
-                    jobs_to_remove.append(job)
-
-                # ---------- JOB MARKERS ----------
+                # markers
                 if index == total_jobs - 1:
                     marker = "+"
                 elif index == total_jobs - 2:
@@ -283,13 +310,9 @@ def main():
 
                 print(
                     f"[{job['id']}]{marker}  "
-                    f"{status:<24}"
-                    f"{command}"
+                    f"{'Running':<24}"
+                    f"{job['command']}"
                 )
-
-            # remove completed jobs AFTER printing
-            for job in jobs_to_remove:
-                JOBS.remove(job)
 
         else:
             global JOB_NUMBER
