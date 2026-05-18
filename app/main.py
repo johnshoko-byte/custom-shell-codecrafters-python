@@ -263,6 +263,55 @@ def main():
 
             if not args:
                 continue
+        # ---------------- PIPELINES ----------------
+        if "|" in args:
+
+            pipe_index = args.index("|")
+
+            left_cmd = args[:pipe_index]
+            right_cmd = args[pipe_index + 1:]
+
+            if not left_cmd or not right_cmd:
+                print("Invalid pipeline")
+                continue
+
+            left_program = left_cmd[0]
+            right_program = right_cmd[0]
+
+            left_exe = find_executable(left_program)
+            right_exe = find_executable(right_program)
+
+            if not left_exe:
+                print(f"{left_program}: not found")
+                continue
+
+            if not right_exe:
+                print(f"{right_program}: not found")
+                continue
+
+            try:
+
+                p1 = subprocess.Popen(
+                    left_cmd,
+                    executable=left_exe,
+                    stdout=subprocess.PIPE
+                )
+
+                p2 = subprocess.Popen(
+                    right_cmd,
+                    executable=right_exe,
+                    stdin=p1.stdout
+                )
+
+                p1.stdout.close()
+
+                p2.communicate()
+                p1.wait()
+
+            except Exception as e:
+                print(f"Pipeline error: {e}")
+
+            continue
 
         program = args[0]
 
@@ -345,7 +394,6 @@ def main():
                 JOBS.remove(job)
 
         else:
-            global JOB_NUMBER
 
             exe_path = find_executable(program)
 
