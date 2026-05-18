@@ -9,7 +9,6 @@ TAB_COUNT = 0
 LAST_BUFFER = ""
 MULTI_MATCH_READY = False
 JOBS = []
-JOB_NUMBER = 1
 
 
 def write_output(output, stdout_file=None, stderr_file=None, append_stdout=False):
@@ -366,6 +365,9 @@ def main():
 
                 # BACKGROUND PROCESS
                 if background:
+
+                    job_number = get_next_job_number()
+
                     process = subprocess.Popen(
                         [program] + args[1:],
                         executable=exe_path,
@@ -374,15 +376,6 @@ def main():
                     )
 
                     print(f"[{job_number}] {process.pid}")
-
-                    JOBS.append({
-                        "id": JOB_NUMBER,
-                        "pid": process.pid,
-                        "process": process,
-                        "command": original_command
-                    })
-
-                    job_number = get_next_job_number()
 
                     JOBS.append({
                         "id": job_number,
