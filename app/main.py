@@ -230,6 +230,31 @@ def get_next_job_number():
     return job_number
 
 
+def run_builtin(args, builtins):
+    program = args[0]
+
+    if program == "echo":
+        return " ".join(args[1:]) + "\n"
+
+    elif program == "pwd":
+        return os.getcwd() + "\n"
+
+    elif program == "type":
+        cmd = args[1] if len(args) > 1 else ""
+
+        if cmd in builtins:
+            return f"{cmd} is a shell builtin\n"
+
+        path = find_executable(cmd)
+
+        if path:
+            return f"{cmd} is {path}\n"
+
+        return f"{cmd}: not found\n"
+
+    return None
+
+
 def main():
     builtins = ["echo", "exit", "type", "pwd", "cd", "jobs"]
 
@@ -278,35 +303,65 @@ def main():
             left_program = left_cmd[0]
             right_program = right_cmd[0]
 
-            left_exe = find_executable(left_program)
-            right_exe = find_executable(right_program)
-
-            if not left_exe:
-                print(f"{left_program}: not found")
-                continue
-
-            if not right_exe:
-                print(f"{right_program}: not found")
-                continue
-
             try:
 
-                p1 = subprocess.Popen(
-                    left_cmd,
-                    executable=left_exe,
-                    stdout=subprocess.PIPE
-                )
+                # ---------------- LEFT SIDE ----------------
 
-                p2 = subprocess.Popen(
-                    right_cmd,
-                    executable=right_exe,
-                    stdin=p1.stdout
-                )
+                if left_program in builtins:
 
-                p1.stdout.close()
+                    left_output = run_builtin(left_cmd, builtins)
 
-                p2.communicate()
-                p1.wait()
+                    p2 = subprocess.Popen(
+                        right_cmd,
+                        stdin=subprocess.PIPE
+                    )
+
+                    p2.communicate(input=left_output.encode())
+
+                else:
+
+                    left_exe = find_executable(left_program)
+
+                    if not left_exe:
+                        print(f"{left_program}: not found")
+                        continue
+
+                    p1 = subprocess.Popen(
+                        left_cmd,
+                        executable=left_exe,
+                        stdout=subprocess.PIPE
+                    )
+
+                    # ---------------- RIGHT SIDE ----------------
+
+                    if right_program in builtins:
+
+                        builtin_output = run_builtin(right_cmd, builtins)
+
+                        if builtin_output:
+                            print(builtin_output, end="")
+
+                        p1.stdout.close()
+                        p1.wait()
+
+                    else:
+
+                        right_exe = find_executable(right_program)
+
+                        if not right_exe:
+                            print(f"{right_program}: not found")
+                            continue
+
+                        p2 = subprocess.Popen(
+                            right_cmd,
+                            executable=right_exe,
+                            stdin=p1.stdout
+                        )
+
+                        p1.stdout.close()
+
+                        p2.communicate()
+                        p1.wait()
 
             except Exception as e:
                 print(f"Pipeline error: {e}")
