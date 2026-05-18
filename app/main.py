@@ -469,8 +469,25 @@ def main():
                 JOBS.remove(job)
 
         elif program == "history":
-            for index, command in enumerate(HISTORY, start=1):
-                print(f"    {index}  {command}")
+
+            # history n
+            if len(args) > 1:
+
+                try:
+                    n = int(args[1])
+                    start_index = max(0, len(HISTORY) - n)
+
+                    for index, command in enumerate(HISTORY[start_index:], start=start_index + 1):
+                        print(f"    {index}  {command}")
+
+                except ValueError:
+                    print("history: invalid argument")
+
+            # plain history
+            else:
+
+                for index, command in enumerate(HISTORY, start=1):
+                    print(f"    {index}  {command}")
 
         else:
 
