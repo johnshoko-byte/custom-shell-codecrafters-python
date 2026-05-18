@@ -287,84 +287,91 @@ def main():
 
             if not args:
                 continue
-         # ================= PIPELINE =================
+        # ================= PIPELINE =================
         if "|" in args:
 
-            # split pipeline
+            # split pipeline commands
             commands = []
             current = []
 
-            for t in args:
-                if t == "|":
+            for token in args:
+                if token == "|":
                     commands.append(current)
                     current = []
                 else:
-                    current.append(t)
+                    current.append(token)
 
             commands.append(current)
 
-            n = len(commands)
-            prev_stdout = None
             processes = []
+            prev_output = None
 
-            for i, cmd in enumerate(commands):
-                is_last = (i == n - 1)
-                program = cmd[0]
+            try:
 
-                # ---------------- BUILTIN ----------------
-                if program in builtins:
+                for i, cmd in enumerate(commands):
 
-                    output = run_builtin(cmd, builtins)
+                    program = cmd[0]
+                    is_builtin = program in builtins
+                    is_last = (i == len(commands) - 1)
 
-                    if i == 0:
-                        # feed into next stage
+                    # ---------------- BUILTIN ----------------
+                    if is_builtin:
+
+                        output = run_builtin(cmd, builtins)
+
+                        # builtin ignores stdin for this stage
+                        prev_output = output
+
+                        # if last command, print result
+                        if is_last:
+                            sys.stdout.buffer.write(output)
+
+                        continue
+
+                    # ---------------- EXTERNAL ----------------
+                    exe = find_executable(program)
+
+                    if not exe:
+                        print(f"{program}: not found")
+                        break
+
+                    # builtin output feeding into process
+                    if isinstance(prev_output, bytes):
+
                         p = subprocess.Popen(
-                            commands[i + 1],
+                            cmd,
+                            executable=exe,
                             stdin=subprocess.PIPE,
-                            stdout=subprocess.PIPE
+                            stdout=None if is_last else subprocess.PIPE
                         )
-                        p.stdin.write(output)
-                        p.stdin.close()
-                        prev_stdout = p.stdout
-                        processes.append(p)
-                        continue
 
-                    if is_last:
-                        sys.stdout.buffer.write(output)
-                        continue
+                        stdout_data, _ = p.communicate(input=prev_output)
 
-                    p = subprocess.Popen(
-                        commands[i + 1],
-                        stdin=subprocess.PIPE,
-                        stdout=subprocess.PIPE
-                    )
-                    p.stdin.write(output)
-                    p.stdin.close()
-                    prev_stdout = p.stdout
+                    else:
+
+                        p = subprocess.Popen(
+                            cmd,
+                            executable=exe,
+                            stdin=prev_output,
+                            stdout=None if is_last else subprocess.PIPE
+                        )
+
+                        stdout_data = None
+
+                    if hasattr(prev_output, "close"):
+                        prev_output.close()
+
+                    if not is_last:
+                        prev_output = p.stdout if stdout_data is None else stdout_data
+
                     processes.append(p)
-                    continue
 
-                # ---------------- EXTERNAL ----------------
-                exe = find_executable(program)
-                if not exe:
-                    print(f"{program}: not found")
-                    break
+                # wait for all processes
+                for p in processes:
+                    p.wait()
 
-                p = subprocess.Popen(
-                    cmd,
-                    executable=exe,
-                    stdin=prev_stdout,
-                    stdout=None if is_last else subprocess.PIPE
-                )
-
-                if prev_stdout:
-                    prev_stdout.close()
-
-                prev_stdout = p.stdout
-                processes.append(p)
-
-            for p in processes:
-                p.wait()
+            except Exception as e:
+                print(f"Pipeline error: {e}")
 
             continue
 
