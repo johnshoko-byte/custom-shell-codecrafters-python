@@ -9,6 +9,7 @@ TAB_COUNT = 0
 LAST_BUFFER = ""
 MULTI_MATCH_READY = False
 JOBS = []
+HISTORY = []
 
 
 def write_output(output, stdout_file=None, stderr_file=None, append_stdout=False):
@@ -253,9 +254,15 @@ def run_builtin(args, builtins):
         return f"{target}: not found\n".encode()
 
     elif cmd == "history":
-        return b""
 
-    return b""
+        output = ""
+
+        for index, command in enumerate(HISTORY, start=1):
+            output += f"    {index}  {command}\n"
+
+        return output.encode()
+
+        return b""
 
 
 def main():
@@ -275,6 +282,8 @@ def main():
 
         if not command_line:
             continue
+
+        HISTORY.append(command_line)
 
         args, stdout_file, stderr_file, append_stdout, append_stderr = parse_redirection(
             command_line
@@ -460,7 +469,8 @@ def main():
                 JOBS.remove(job)
 
         elif program == "history":
-            pass
+            for index, command in enumerate(HISTORY, start=1):
+                print(f"    {index}  {command}")
 
         else:
 
