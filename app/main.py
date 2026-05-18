@@ -288,80 +288,118 @@ def main():
 
             if not args:
                 continue
-        # ---------------- PIPELINES ----------------
+        # ---------------- PIPELINES (MULTI-STAGE) ----------------
         if "|" in args:
 
-            pipe_index = args.index("|")
+            # split into commands
+            commands = []
+            current = []
 
-            left_cmd = args[:pipe_index]
-            right_cmd = args[pipe_index + 1:]
+            for token in args:
+                if token == "|":
+                    if not current:
+                        print("Invalid pipeline")
+                        continue
+                    commands.append(current)
+                    current = []
+                else:
+                    current.append(token)
 
-            if not left_cmd or not right_cmd:
+            if not current:
                 print("Invalid pipeline")
                 continue
 
-            left_program = left_cmd[0]
-            right_program = right_cmd[0]
+            commands.append(current)
+
+            processes = []
+            prev_pipe = None
 
             try:
+                for i, cmd in enumerate(commands):
 
-                # ---------------- LEFT SIDE ----------------
+                    program = cmd[0]
 
-                if left_program in builtins:
+                    is_builtin = program in builtins
+                    is_last = (i == len(commands) - 1)
 
-                    left_output = run_builtin(left_cmd, builtins)
+                    # ---------------- FIRST COMMAND ----------------
+                    if i == 0:
 
-                    p2 = subprocess.Popen(
-                        right_cmd,
-                        stdin=subprocess.PIPE
-                    )
+                        if is_builtin:
+                            output = run_builtin(cmd, builtins)
 
-                    p2.communicate(input=left_output.encode())
+                            p = subprocess.Popen(
+                                commands[i + 1],
+                                stdin=subprocess.PIPE,
+                                stdout=subprocess.PIPE
+                            )
 
-                else:
+                            p.stdin.write(output.encode())
+                            p.stdin.close()
 
-                    left_exe = find_executable(left_program)
-
-                    if not left_exe:
-                        print(f"{left_program}: not found")
-                        continue
-
-                    p1 = subprocess.Popen(
-                        left_cmd,
-                        executable=left_exe,
-                        stdout=subprocess.PIPE
-                    )
-
-                    # ---------------- RIGHT SIDE ----------------
-
-                    if right_program in builtins:
-
-                        builtin_output = run_builtin(right_cmd, builtins)
-
-                        if builtin_output:
-                            print(builtin_output, end="")
-
-                        p1.stdout.close()
-                        p1.wait()
-
-                    else:
-
-                        right_exe = find_executable(right_program)
-
-                        if not right_exe:
-                            print(f"{right_program}: not found")
+                            prev_pipe = p.stdout
+                            processes.append(p)
                             continue
 
-                        p2 = subprocess.Popen(
-                            right_cmd,
-                            executable=right_exe,
-                            stdin=p1.stdout
+                        exe = find_executable(program)
+
+                        p = subprocess.Popen(
+                            cmd,
+                            executable=exe,
+                            stdout=subprocess.PIPE
                         )
 
-                        p1.stdout.close()
+                        prev_pipe = p.stdout
+                        processes.append(p)
 
-                        p2.communicate()
-                        p1.wait()
+                    # ---------------- MIDDLE / LAST COMMANDS ----------------
+                    else:
+
+                        stdin = prev_pipe
+
+                        if is_builtin:
+
+                            output = run_builtin(cmd, builtins)
+
+                            if is_last:
+                                print(output, end="")
+                            else:
+                                p = subprocess.Popen(
+                                    commands[i + 1],
+                                    stdin=subprocess.PIPE,
+                                    stdout=subprocess.PIPE
+                                )
+                                p.stdin.write(output.encode())
+                                p.stdin.close()
+                                prev_pipe = p.stdout
+                                processes.append(p)
+
+                            continue
+
+                        exe = find_executable(program)
+
+                        if not exe:
+                            print(f"{program}: not found")
+                            break
+
+                        stdout = None if is_last else subprocess.PIPE
+
+                        p = subprocess.Popen(
+                            cmd,
+                            executable=exe,
+                            stdin=stdin,
+                            stdout=stdout
+                        )
+
+                        if prev_pipe:
+                            prev_pipe.close()
+
+                        prev_pipe = p.stdout
+                        processes.append(p)
+
+                # ---------------- CLEANUP ----------------
+                for p in processes:
+                    p.wait()
 
             except Exception as e:
                 print(f"Pipeline error: {e}")
