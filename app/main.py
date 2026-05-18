@@ -236,26 +236,30 @@ def run_builtin(args, builtins):
     if cmd == "echo":
         return (" ".join(args[1:]) + "\n").encode()
 
-    if cmd == "pwd":
+    elif cmd == "pwd":
         return (os.getcwd() + "\n").encode()
 
-    if cmd == "type":
+    elif cmd == "type":
         target = args[1] if len(args) > 1 else ""
 
         if target in builtins:
             return f"{target} is a shell builtin\n".encode()
 
         path = find_executable(target)
+
         if path:
             return f"{target} is {path}\n".encode()
 
         return f"{target}: not found\n".encode()
 
+    elif cmd == "history":
+        return b""
+
     return b""
 
 
 def main():
-    builtins = ["echo", "exit", "type", "pwd", "cd", "jobs"]
+    builtins = ["echo", "exit", "type", "pwd", "cd", "jobs", "history"]
 
     setup_autocomplete()
 
@@ -454,6 +458,9 @@ def main():
             # remove done jobs AFTER printing everything
             for job in jobs_to_remove:
                 JOBS.remove(job)
+
+        elif program == "history":
+            pass
 
         else:
 
