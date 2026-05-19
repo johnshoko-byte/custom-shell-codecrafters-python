@@ -10,6 +10,7 @@ LAST_BUFFER = ""
 MULTI_MATCH_READY = False
 JOBS = []
 HISTORY = []
+LAST_HISTORY_WRITE_INDEX = 0
 
 
 def write_output(output, stdout_file=None, stderr_file=None, append_stdout=False):
@@ -289,7 +290,23 @@ def run_builtin(args, builtins):
 
             except Exception as e:
                 output += f"history: {e}\n"
+        # ---------------- history -a FILE ----------------
+        elif len(args) >= 3 and args[1] == "-a":
 
+            global LAST_HISTORY_WRITE_INDEX
+
+            path = args[2]
+
+            try:
+                with open(path, "a") as f:
+
+                    for command in HISTORY[LAST_HISTORY_WRITE_INDEX:]:
+                        f.write(command + "\n")
+
+                LAST_HISTORY_WRITE_INDEX = len(HISTORY)
+
+            except Exception as e:
+                output += f"history: {e}\n"
         # ---------------- history N ----------------
         elif len(args) > 1:
 
@@ -556,7 +573,23 @@ def main():
 
                 except Exception as e:
                     print(f"history: {e}")
+            # ---------------- history -a FILE ----------------
+            elif len(args) >= 3 and args[1] == "-a":
 
+                global LAST_HISTORY_WRITE_INDEX
+
+                path = args[2]
+
+                try:
+                    with open(path, "a") as f:
+
+                        for command in HISTORY[LAST_HISTORY_WRITE_INDEX:]:
+                            f.write(command + "\n")
+
+                    LAST_HISTORY_WRITE_INDEX = len(HISTORY)
+
+                except Exception as e:
+                    print(f"history: {e}")
             # ---------------- history N ----------------
             elif len(args) > 1:
 
