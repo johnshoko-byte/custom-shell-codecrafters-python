@@ -360,6 +360,23 @@ def load_history_file():
         pass
 
 
+def save_history_file():
+
+    histfile = os.environ.get("HISTFILE")
+
+    if not histfile:
+        return
+
+    try:
+        with open(histfile, "w") as f:
+
+            for command in HISTORY:
+                f.write(command + "\n")
+
+    except Exception:
+        pass
+
+
 def main():
     builtins = ["echo", "exit", "type", "pwd", "cd", "jobs", "history"]
 
@@ -488,6 +505,7 @@ def main():
         program = args[0]
 
         if program == "exit":
+            save_history_file()
             break
 
         elif program == "echo":
