@@ -332,7 +332,10 @@ def run_builtin(args, builtins):
 
         return output.encode()
 
+    elif cmd == "complete":
         return b""
+
+    return b""
 
 
 def load_history_file():
@@ -378,7 +381,8 @@ def save_history_file():
 
 
 def main():
-    builtins = ["echo", "exit", "type", "pwd", "cd", "jobs", "history"]
+    builtins = ["echo", "exit", "type", "pwd",
+                "cd", "jobs", "history", "complete"]
 
     setup_autocomplete()
     setup_autocomplete()
@@ -657,6 +661,9 @@ def main():
 
                 for index, command in enumerate(HISTORY, start=1):
                     print(f"    {index}  {command}")
+
+        elif program == "complete":
+            pass
 
         else:
 
