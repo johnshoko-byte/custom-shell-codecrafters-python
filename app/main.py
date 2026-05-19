@@ -335,10 +335,37 @@ def run_builtin(args, builtins):
         return b""
 
 
+def load_history_file():
+
+    histfile = os.environ.get("HISTFILE")
+
+    if not histfile:
+        return
+
+    if not os.path.exists(histfile):
+        return
+
+    try:
+        with open(histfile, "r") as f:
+
+            for line in f:
+                line = line.rstrip("\n")
+
+                if line.strip() == "":
+                    continue
+
+                HISTORY.append(line)
+
+    except Exception:
+        pass
+
+
 def main():
     builtins = ["echo", "exit", "type", "pwd", "cd", "jobs", "history"]
 
     setup_autocomplete()
+    setup_autocomplete()
+    load_history_file()
 
     while True:
         try:
