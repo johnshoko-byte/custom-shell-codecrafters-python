@@ -257,20 +257,57 @@ def run_builtin(args, builtins):
 
         output = ""
 
-        # history n
-        if len(args) > 1:
+        # ---------------- history -r FILE ----------------
+        if len(args) >= 3 and args[1] == "-r":
+
+            path = args[2]
+
+            try:
+                with open(path, "r") as f:
+
+                    for line in f:
+                        line = line.rstrip("\n")
+
+                        if line.strip() == "":
+                            continue
+
+                        HISTORY.append(line)
+
+            except FileNotFoundError:
+                output += f"history: {path}: No such file\n"
+
+        # ---------------- history -w FILE ----------------
+        elif len(args) >= 3 and args[1] == "-w":
+
+            path = args[2]
+
+            try:
+                with open(path, "w") as f:
+
+                    for command in HISTORY:
+                        f.write(command + "\n")
+
+            except Exception as e:
+                output += f"history: {e}\n"
+
+        # ---------------- history N ----------------
+        elif len(args) > 1:
 
             try:
                 n = int(args[1])
+
                 start_index = max(0, len(HISTORY) - n)
 
-                for index, command in enumerate(HISTORY[start_index:], start=start_index + 1):
+                for index, command in enumerate(
+                    HISTORY[start_index:],
+                    start=start_index + 1
+                ):
                     output += f"    {index}  {command}\n"
 
             except ValueError:
                 output += "history: invalid argument\n"
 
-        # plain history
+        # ---------------- plain history ----------------
         else:
 
             for index, command in enumerate(HISTORY, start=1):
@@ -505,6 +542,20 @@ def main():
 
                 except FileNotFoundError:
                     print(f"history: {path}: No such file")
+
+            # ---------------- history -w FILE ----------------
+            elif len(args) >= 3 and args[1] == "-w":
+
+                path = args[2]
+
+                try:
+                    with open(path, "w") as f:
+
+                        for command in HISTORY:
+                            f.write(command + "\n")
+
+                except Exception as e:
+                    print(f"history: {e}")
 
             # ---------------- history N ----------------
             elif len(args) > 1:
