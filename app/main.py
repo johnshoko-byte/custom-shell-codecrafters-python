@@ -189,7 +189,7 @@ def completer(text, state):
     #
     if len(parts) <= 1 and not buffer.endswith(" "):
 
-        candidates = EXECUTABLES.union(builtins)
+        candidates = EXECUTABLES.union(BUILTINS)
 
         matches = sorted([
             cmd for cmd in candidates
@@ -203,22 +203,23 @@ def completer(text, state):
 
         common = longest_common_prefix(matches)
 
-        if state == 0:
-
-            # full single match
-            if len(matches) == 1:
+        # CASE 1: single match
+        if len(matches) == 1:
+            if state == 0:
                 return matches[0] + " "
+            return None
 
-            # partial completion
-            if common != text:
+        # CASE 2: multiple matches but shared prefix extends input
+        if common != text:
+            if state == 0:
                 return common
+            return None
 
-            # multiple matches, no progress
+        # CASE 3: multiple matches, no further prefix
+        if state == 0:
             sys.stdout.write("\x07")
             sys.stdout.flush()
 
-        if state < len(matches):
-            return matches[state] + " "
         return None
 
     # ---------------- FILE / DIRECTORY COMPLETION ----------------
