@@ -12,6 +12,8 @@ JOBS = []
 HISTORY = []
 LAST_HISTORY_WRITE_INDEX = 0
 COMPLETIONS = {}
+BUILTINS = {"echo", "exit", "type", "pwd", "cd", "jobs", "history", "complete"}
+candidates = EXECUTABLES.union(BUILTINS)
 
 
 def write_output(output, stdout_file=None, stderr_file=None, append_stdout=False):
@@ -187,9 +189,11 @@ def completer(text, state):
     #
     if len(parts) <= 1 and not buffer.endswith(" "):
 
+        candidates = EXECUTABLES.union(builtins)
+
         matches = sorted([
-            exe for exe in EXECUTABLES
-            if exe.startswith(text)
+            cmd for cmd in candidates
+            if cmd.startswith(text)
         ])
 
         if not matches:
