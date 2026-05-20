@@ -159,14 +159,7 @@ def completer(text, state):
 
                 # single completion for this stage
                 if state == 0:
-
-                    completion = matches[0]
-
-                    # replace partial word only
-                    if current_word:
-                        return completion[len(current_word):] + " "
-
-                    return completion + " "
+                    return matches[0] + " "
 
                 return None
 
