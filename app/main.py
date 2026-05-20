@@ -333,6 +333,12 @@ def run_builtin(args, builtins):
         return output.encode()
 
     elif cmd == "complete":
+
+        # complete -p COMMAND
+        if len(args) >= 3 and args[1] == "-p":
+            target = args[2]
+            return f"complete: {target}: no completion specification\n".encode()
+
         return b""
 
     return b""
@@ -663,7 +669,10 @@ def main():
                     print(f"    {index}  {command}")
 
         elif program == "complete":
-            pass
+
+            # complete -p COMMAND
+            if len(args) >= 3 and args[1] == "-p":
+                print(f"complete: {args[2]}: no completion specification")
 
         else:
 
