@@ -213,7 +213,9 @@ def completer(text, state):
             sys.stdout.write("\x07")
             sys.stdout.flush()
 
-        return matches[state] if state < len(matches) else None
+        if state < len(matches):
+            return matches[state] + " "
+        return None
 
     # ---------------- FILE / DIRECTORY COMPLETION ----------------
     token = text
