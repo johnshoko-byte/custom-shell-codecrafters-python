@@ -85,23 +85,57 @@ def completer(text, state):
 
     # ---------------- REGISTERED COMPLETERS ----------------
     #
-    # Trigger when:
-    # docker <TAB>
+    # Examples:
     #
-    # meaning:
-    # buffer ends with space
-    # first token has registered completer
+    # git <TAB>
+    # git rem<TAB>
+    # git remote set<TAB>
     #
-    if buffer.endswith(" ") and len(parts) >= 1:
+    if len(parts) >= 1:
 
         command_name = parts[0]
 
         if command_name in COMPLETIONS:
 
+            # ---------------- CURRENT WORD ----------------
+            #
+            # If buffer ends with space:
+            #   current word = ""
+            #
+            # Otherwise:
+            #   current word = last token
+            #
+            if buffer.endswith(" "):
+                current_word = ""
+            else:
+                current_word = parts[-1]
+
+            # ---------------- PREVIOUS WORD ----------------
+            #
+            # git remote set<TAB>
+            # previous = remote
+            #
+            previous_word = ""
+
+            if buffer.endswith(" "):
+
+                if len(parts) >= 2:
+                    previous_word = parts[-1]
+
+            else:
+
+                if len(parts) >= 3:
+                    previous_word = parts[-2]
+
             try:
 
                 result = subprocess.run(
-                    [COMPLETIONS[command_name]],
+                    [
+                        COMPLETIONS[command_name],
+                        command_name,
+                        current_word,
+                        previous_word
+                    ],
                     capture_output=True,
                     text=True
                 )
@@ -115,45 +149,29 @@ def completer(text, state):
                 if not candidates:
                     return None
 
-                # single candidate for this stage
+                matches = [
+                    c for c in candidates
+                    if c.startswith(current_word)
+                ]
+
+                if not matches:
+                    return None
+
+                # single completion for this stage
                 if state == 0:
-                    return candidates[0] + " "
+
+                    completion = matches[0]
+
+                    # replace partial word only
+                    if current_word:
+                        return completion[len(current_word):] + " "
+
+                    return completion + " "
 
                 return None
 
             except Exception:
                 return None
-
-    # ---------------- COMMAND COMPLETION ----------------
-    if len(parts) <= 1 and not buffer.endswith(" "):
-
-        builtins = [
-            "echo",
-            "exit",
-            "type",
-            "pwd",
-            "cd",
-            "jobs",
-            "history",
-            "complete"
-        ]
-
-        executables = EXECUTABLES or []
-
-        matches = sorted(
-            cmd for cmd in (builtins + list(executables))
-            if cmd.startswith(text)
-        )
-
-        if not matches:
-            sys.stdout.write("\x07")
-            sys.stdout.flush()
-            return None
-
-        if state < len(matches):
-            return matches[state] + " "
-
-        return None
 
     # ---------------- FILE / DIRECTORY COMPLETION ----------------
     token = text
