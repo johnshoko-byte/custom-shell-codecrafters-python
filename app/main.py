@@ -11,6 +11,7 @@ MULTI_MATCH_READY = False
 JOBS = []
 HISTORY = []
 LAST_HISTORY_WRITE_INDEX = 0
+COMPLETIONS = {}
 
 
 def write_output(output, stdout_file=None, stderr_file=None, append_stdout=False):
@@ -334,10 +335,31 @@ def run_builtin(args, builtins):
 
     elif cmd == "complete":
 
-        # complete -p COMMAND
-        if len(args) >= 3 and args[1] == "-p":
-            target = args[2]
-            return f"complete: {target}: no completion specification\n".encode()
+        # ---------------- complete -C PATH COMMAND ----------------
+        if len(args) >= 4 and args[1] == "-C":
+
+            script_path = args[2]
+            command_name = args[3]
+
+            COMPLETIONS[command_name] = script_path
+
+            return b""
+
+        # ---------------- complete -p COMMAND ----------------
+        elif len(args) >= 3 and args[1] == "-p":
+
+            command_name = args[2]
+
+            if command_name in COMPLETIONS:
+                return (
+                    f"complete -C '{COMPLETIONS[command_name]}' "
+                    f"{command_name}\n"
+                ).encode()
+
+            return (
+                f"complete: {command_name}: "
+                f"no completion specification\n"
+            ).encode()
 
         return b""
 
@@ -670,9 +692,27 @@ def main():
 
         elif program == "complete":
 
-            # complete -p COMMAND
-            if len(args) >= 3 and args[1] == "-p":
-                print(f"complete: {args[2]}: no completion specification")
+            # ---------------- complete -C PATH COMMAND ----------------
+            if len(args) >= 4 and args[1] == "-C":
+
+                script_path = args[2]
+                command_name = args[3]
+
+                COMPLETIONS[command_name] = script_path
+
+            # ---------------- complete -p COMMAND ----------------
+            elif len(args) >= 3 and args[1] == "-p":
+
+                command_name = args[2]
+
+                if command_name in COMPLETIONS:
+                    print(
+                        f"complete -C '{COMPLETIONS[command_name]}' {command_name}"
+                    )
+                else:
+                    print(
+                        f"complete: {command_name}: no completion specification"
+                    )
 
         else:
 
