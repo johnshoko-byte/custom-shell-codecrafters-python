@@ -96,7 +96,7 @@ def parse_redirection(command_line):
 
 
 def completer(text, state):
-
+    global TAB_COUNT
     buffer = readline.get_line_buffer()
     parts = buffer.split()
 
@@ -197,22 +197,37 @@ def completer(text, state):
         ])
 
         if not matches:
-            sys.stdout.write("\x07")
+            sys.stdout.write("\a")
             sys.stdout.flush()
+            TAB_COUNT = 0
             return None
 
-        common = longest_common_prefix(matches)
+        # ---------------- FIRST TAB ----------------
+        if TAB_COUNT == 0:
 
-        # CASE 1: single match
-        if len(matches) == 1:
-            if state == 0:
+            common = longest_common_prefix(matches)
+
+            if len(matches) == 1:
+                TAB_COUNT = 0
                 return matches[0] + " "
+
+            if common != text:
+                TAB_COUNT = 0
+                return common
+
+            sys.stdout.write("\a")
+            sys.stdout.flush()
+            TAB_COUNT = 1
             return None
 
-        # CASE 2: multiple matches but shared prefix extends input
-        if common != text:
-            if state == 0:
-                return common
+        # ---------------- SECOND TAB ----------------
+        if TAB_COUNT == 1:
+
+            sys.stdout.write("\n")
+            sys.stdout.write("  ".join(matches))
+            sys.stdout.write("\n")
+
+            TAB_COUNT = 0
             return None
 
         # CASE 3: multiple matches, no further prefix
