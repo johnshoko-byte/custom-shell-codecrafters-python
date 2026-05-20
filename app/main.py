@@ -79,12 +79,65 @@ def parse_redirection(command_line):
 
 
 def completer(text, state):
+
     buffer = readline.get_line_buffer()
     parts = buffer.split()
 
+    # ---------------- REGISTERED COMPLETERS ----------------
+    #
+    # Trigger when:
+    # docker <TAB>
+    #
+    # meaning:
+    # buffer ends with space
+    # first token has registered completer
+    #
+    if buffer.endswith(" ") and len(parts) >= 1:
+
+        command_name = parts[0]
+
+        if command_name in COMPLETIONS:
+
+            try:
+
+                result = subprocess.run(
+                    [COMPLETIONS[command_name]],
+                    capture_output=True,
+                    text=True
+                )
+
+                candidates = [
+                    line.strip()
+                    for line in result.stdout.splitlines()
+                    if line.strip()
+                ]
+
+                if not candidates:
+                    return None
+
+                # single candidate for this stage
+                if state == 0:
+                    return candidates[0] + " "
+
+                return None
+
+            except Exception:
+                return None
+
     # ---------------- COMMAND COMPLETION ----------------
     if len(parts) <= 1 and not buffer.endswith(" "):
-        builtins = ["echo", "exit"]
+
+        builtins = [
+            "echo",
+            "exit",
+            "type",
+            "pwd",
+            "cd",
+            "jobs",
+            "history",
+            "complete"
+        ]
+
         executables = EXECUTABLES or []
 
         matches = sorted(
@@ -99,6 +152,7 @@ def completer(text, state):
 
         if state < len(matches):
             return matches[state] + " "
+
         return None
 
     # ---------------- FILE / DIRECTORY COMPLETION ----------------
