@@ -29,6 +29,21 @@ def write_output(output, stdout_file=None, stderr_file=None, append_stdout=False
         print(output)
 
 
+def longest_common_prefix(strings):
+    if not strings:
+        return ""
+
+    prefix = strings[0]
+
+    for s in strings[1:]:
+        while not s.startswith(prefix):
+            prefix = prefix[:-1]
+            if not prefix:
+                return ""
+
+    return prefix
+
+
 def find_executable(cmd_name):
     for directory in os.environ.get("PATH", "").split(":"):
         full_path = os.path.join(directory, cmd_name)
@@ -165,6 +180,40 @@ def completer(text, state):
 
             except Exception:
                 return None
+
+    # ---------------- COMMAND COMPLETION ----------------
+    #
+    # Only complete executables if we're on the FIRST word
+    #
+    if len(parts) <= 1 and not buffer.endswith(" "):
+
+        matches = sorted([
+            exe for exe in EXECUTABLES
+            if exe.startswith(text)
+        ])
+
+        if not matches:
+            sys.stdout.write("\x07")
+            sys.stdout.flush()
+            return None
+
+        common = longest_common_prefix(matches)
+
+        if state == 0:
+
+            # full single match
+            if len(matches) == 1:
+                return matches[0] + " "
+
+            # partial completion
+            if common != text:
+                return common
+
+            # multiple matches, no progress
+            sys.stdout.write("\x07")
+            sys.stdout.flush()
+
+        return matches[state] if state < len(matches) else None
 
     # ---------------- FILE / DIRECTORY COMPLETION ----------------
     token = text
