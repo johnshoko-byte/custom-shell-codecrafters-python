@@ -204,21 +204,23 @@ def completer(text, state):
         if len(matches) == 1:
             return matches[0] + " " if state == 0 else None
 
-        # ---------------- MULTIPLE MATCHES (WT6 FIX) ----------------
-        common = longest_common_prefix(matches)
+        # ---------------- MULTIPLE MATCHES ----------------
 
-        # IMPORTANT CASE: partial completion possible
-        if common and common != text:
+        if len(matches) > 1:
+
+            # FIRST TAB → just ring bell and store matches
             if state == 0:
-                return common
+                COMPLETION_CACHE = sorted(matches)
+                sys.stdout.write("\a")
+                sys.stdout.flush()
+                return None
+
+            # SECOND TAB → print all matches
+            if state == 1:
+                print("  ".join(COMPLETION_CACHE))
+                return None
+
             return None
-
-        # no progress possible → just ring bell
-        if state == 0:
-            sys.stdout.write("\a")
-            sys.stdout.flush()
-
-        return None
 
     # ---------------- FILE / DIRECTORY COMPLETION ----------------
     token = text
