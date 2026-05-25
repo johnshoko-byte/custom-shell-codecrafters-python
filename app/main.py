@@ -185,9 +185,7 @@ def completer(text, state):
                 return None
 
     # ---------------- COMMAND COMPLETION ----------------
-    #
-    # Only complete executables if we're on the FIRST word
-    #
+
     if len(parts) <= 1 and not buffer.endswith(" "):
 
         candidates = EXECUTABLES.union(BUILTINS)
@@ -206,20 +204,21 @@ def completer(text, state):
         if len(matches) == 1:
             return matches[0] + " " if state == 0 else None
 
-        # ---------------- MULTIPLE MATCHES ----------------
+        # ---------------- MULTIPLE MATCHES (WT6 FIX) ----------------
+        common = longest_common_prefix(matches)
 
+        # IMPORTANT CASE: partial completion possible
+        if common and common != text:
+            if state == 0:
+                return common
+            return None
+
+        # no progress possible → just ring bell
         if state == 0:
-            # first TAB → store results, ring bell
-            COMPLETION_CACHE = matches
-
             sys.stdout.write("\a")
             sys.stdout.flush()
-            return None
 
-        # second TAB → print all matches
-        if state == 1:
-            print("  ".join(COMPLETION_CACHE))
-            return None
+        return None
 
     # ---------------- FILE / DIRECTORY COMPLETION ----------------
     token = text
