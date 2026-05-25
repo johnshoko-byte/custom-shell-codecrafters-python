@@ -199,41 +199,30 @@ def completer(text, state):
         if not matches:
             sys.stdout.write("\a")
             sys.stdout.flush()
-            TAB_COUNT = 0
             return None
 
-        # ---------------- FIRST TAB ----------------
-        if TAB_COUNT == 0:
+        # ---------------- SINGLE MATCH ----------------
+        if len(matches) == 1:
+            return matches[0] + " " if state == 0 else None
 
+        # ---------------- MULTIPLE MATCHES ----------------
+        if state == 0:
             common = longest_common_prefix(matches)
 
-            if len(matches) == 1:
-                TAB_COUNT = 0
-                return matches[0] + " "
-
+            # partial completion (WT6 FIX)
             if common != text:
-                TAB_COUNT = 0
                 return common
 
+            # no prefix improvement → ring bell
             sys.stdout.write("\a")
             sys.stdout.flush()
-            TAB_COUNT = 1
+
+            # IMPORTANT: return None for state 0
             return None
 
-        # ---------------- SECOND TAB ----------------
-        if TAB_COUNT == 1:
-
-            sys.stdout.write("\n")
-            sys.stdout.write("  ".join(matches))
-            sys.stdout.write("\n")
-
-            TAB_COUNT = 0
-            return None
-
-        # CASE 3: multiple matches, no further prefix
-        if state == 0:
-            sys.stdout.write("\x07")
-            sys.stdout.flush()
+        # IMPORTANT: THIS is what WH6 needs
+        if state < len(matches):
+            return matches[state]
 
         return None
 
