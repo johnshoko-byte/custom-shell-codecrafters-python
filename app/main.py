@@ -195,53 +195,40 @@ def completer(text, state):
             if cmd.startswith(text)
         ])
 
-        if len(matches) == 0:
+        # NO MATCHES
+        if not matches:
             sys.stdout.write("\a")
             sys.stdout.flush()
             TAB_COUNT = 0
             return None
 
-        # FIRST TAB
+        # ---------------- FIRST TAB ----------------
         if TAB_COUNT == 0:
+
             common = longest_common_prefix(matches)
 
+            # single match → complete immediately
             if len(matches) == 1:
                 TAB_COUNT = 0
                 return matches[0] + " "
 
+            # partial prefix expansion
             if common != text:
                 TAB_COUNT = 0
                 return common
 
+            # multiple matches → bell
             sys.stdout.write("\a")
             sys.stdout.flush()
             TAB_COUNT = 1
             return None
 
-        # SECOND TAB
-        elif TAB_COUNT == 1:
+        # ---------------- SECOND TAB ----------------
+        if TAB_COUNT == 1:
             sys.stdout.write("  ".join(matches) + "\n")
             sys.stdout.flush()
             TAB_COUNT = 0
             return None
-
-        # ---------------- WT6: PREFIX COMPLETION (IMPORTANT) ----------------
-        common = longest_common_prefix(matches)
-
-        if common and common != text:
-            return common if state == 0 else None
-
-        # ---------------- WH6: MULTIPLE MATCHES (LISTING) ----------------
-        if state == 0:
-            sys.stdout.write("\a")
-            sys.stdout.flush()
-            return None
-
-        if state == 1:
-            print("  ".join(matches))
-            return None
-
-        return None
 
     # ---------------- FILE / DIRECTORY COMPLETION ----------------
     token = text
@@ -561,7 +548,15 @@ def main():
     while True:
         try:
             reap_jobs()
-            command_line = input("$ ")
+            buffer = ""
+            sys.stdout.write("$ ")
+            sys.stdout.flush()
+
+            while True:
+                c = sys.stdin.read(1)
+
+                if c == "\t":
+                    buffer = complete(buffer)
 
             original_command = command_line
 
