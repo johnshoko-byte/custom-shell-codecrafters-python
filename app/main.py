@@ -195,14 +195,35 @@ def completer(text, state):
             if cmd.startswith(text)
         ])
 
-        if not matches:
+        if len(matches) == 0:
             sys.stdout.write("\a")
             sys.stdout.flush()
+            TAB_COUNT = 0
             return None
 
-        # ---------------- SINGLE MATCH ----------------
-        if len(matches) == 1:
-            return matches[0] + " " if state == 0 else None
+        # FIRST TAB
+        if TAB_COUNT == 0:
+            common = longest_common_prefix(matches)
+
+            if len(matches) == 1:
+                TAB_COUNT = 0
+                return matches[0] + " "
+
+            if common != text:
+                TAB_COUNT = 0
+                return common
+
+            sys.stdout.write("\a")
+            sys.stdout.flush()
+            TAB_COUNT = 1
+            return None
+
+        # SECOND TAB
+        elif TAB_COUNT == 1:
+            sys.stdout.write("  ".join(matches) + "\n")
+            sys.stdout.flush()
+            TAB_COUNT = 0
+            return None
 
         # ---------------- WT6: PREFIX COMPLETION (IMPORTANT) ----------------
         common = longest_common_prefix(matches)
