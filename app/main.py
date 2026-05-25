@@ -14,6 +14,7 @@ LAST_HISTORY_WRITE_INDEX = 0
 COMPLETIONS = {}
 BUILTINS = {"echo", "exit", "type", "pwd", "cd", "jobs", "history", "complete"}
 candidates = EXECUTABLES.union(BUILTINS)
+COMPLETION_CACHE = []
 
 
 def write_output(output, stdout_file=None, stderr_file=None, append_stdout=False):
@@ -206,25 +207,19 @@ def completer(text, state):
             return matches[0] + " " if state == 0 else None
 
         # ---------------- MULTIPLE MATCHES ----------------
+
         if state == 0:
-            common = longest_common_prefix(matches)
+            # first TAB → store results, ring bell
+            COMPLETION_CACHE = matches
 
-            # partial completion (WT6 FIX)
-            if common != text:
-                return common
-
-            # no prefix improvement → ring bell
             sys.stdout.write("\a")
             sys.stdout.flush()
-
-            # IMPORTANT: return None for state 0
             return None
 
-        # IMPORTANT: THIS is what WH6 needs
-        if state < len(matches):
-            return matches[state]
-
-        return None
+        # second TAB → print all matches
+        if state == 1:
+            print("  ".join(COMPLETION_CACHE))
+            return None
 
     # ---------------- FILE / DIRECTORY COMPLETION ----------------
     token = text
