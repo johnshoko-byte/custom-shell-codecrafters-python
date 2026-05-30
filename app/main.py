@@ -830,8 +830,19 @@ def main():
                     print(f"    {index}  {command}")
 
         elif program == "declare":
-            print(f"DEBUG: {args}", file=sys.stderr)  # temporary
             if len(args) >= 2 and args[1] == "-p":
+                if len(args) >= 3:
+                    var_name = args[2]
+                    if var_name in VARIABLES:
+                        print(f'declare -- {var_name}="{VARIABLES[var_name]}"')
+                    else:
+                        print(f"declare: {var_name}: not found")
+            elif len(args) >= 2 and "=" in args[1]:
+                var_name, value = args[1].split("=", 1)
+                if not re.match(r'^[a-zA-Z_][a-zA-Z0-9_]*$', var_name):
+                    print(f"declare: `{args[1]}': not a valid identifier")
+                else:
+                    VARIABLES[var_name] = value
 
         elif program == "complete":
 
