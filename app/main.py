@@ -136,25 +136,36 @@ def completer(text, state):
                     }
                 )
 
-                candidates = [
+                matches = sorted([
                     line.strip()
                     for line in result.stdout.splitlines()
-                    if line.strip()
-                ]
-
-                if not candidates:
-                    return None
-
-                matches = [
-                    c for c in candidates
-                    if c.startswith(current_word)
-                ]
+                    if line.strip() and line.strip().startswith(current_word)
+                ])
 
                 if not matches:
                     return None
 
+                # Single match → complete immediately
+                if len(matches) == 1:
+                    TAB_COUNT = 0
+                    if state == 0:
+                        return matches[0] + " "
+                    return None
+
+                # Multiple matches
+                if TAB_COUNT == 1:
+                    sys.stdout.write("\n" + "  ".join(matches) + "\n")
+                    sys.stdout.write("$ " + buffer)
+                    sys.stdout.flush()
+                    TAB_COUNT = 0
+                    return None
+
+                # First tab → bell
                 if state == 0:
-                    return matches[0] + " "
+                    sys.stdout.write("\a")
+                    sys.stdout.flush()
+                    TAB_COUNT = 1
+                    return None
 
                 return None
 
