@@ -580,7 +580,7 @@ def main():
         args, stdout_file, stderr_file, append_stdout, append_stderr = parse_redirection(
             command_line
         )
-        args = [expand_variables(a) for a in args]
+        args = [expanded for a in args if (expanded := expand_variables(a))]
         if not args:
             continue
 
