@@ -3,6 +3,7 @@ import os
 import shlex
 import subprocess
 import readline
+import re
 
 EXECUTABLES = set()
 TAB_COUNT = 0
@@ -469,6 +470,8 @@ def run_builtin(args, builtins):
             return f"declare: {var_name}: not found\n".encode()
         elif len(args) >= 2 and "=" in args[1]:
             var_name, value = args[1].split("=", 1)
+            if not re.match(r'^[a-zA-Z_][a-zA-Z0-9_]*$', var_name):
+                return f"declare: `{args[1]}': not a valid identifier\n".encode()
             VARIABLES[var_name] = value
             return b""
         return b""
