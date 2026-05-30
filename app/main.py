@@ -193,6 +193,7 @@ def completer(text, state):
         # IMPORTANT: check TAB_COUNT before state
         if TAB_COUNT == 1:
             sys.stdout.write("\n" + "  ".join(matches) + "\n")
+            sys.stdout.write("$ " + buffer)
             sys.stdout.flush()
             TAB_COUNT = 0
             return None
