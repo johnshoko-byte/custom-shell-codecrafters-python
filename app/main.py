@@ -112,11 +112,10 @@ def completer(text, state):
                 current_word = parts[-1]
 
             previous_word = ""
-            if buffer.endswith(" "):
-                if len(parts) >= 2:
-                    previous_word = parts[-2]
-            else:
-                if len(parts) >= 3:
+            if len(parts) >= 2:
+                if buffer.endswith(" "):
+                    previous_word = parts[-1]
+                else:
                     previous_word = parts[-2]
 
             try:
