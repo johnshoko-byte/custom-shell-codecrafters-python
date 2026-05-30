@@ -12,9 +12,11 @@ JOBS = []
 HISTORY = []
 LAST_HISTORY_WRITE_INDEX = 0
 COMPLETIONS = {}
-BUILTINS = {"echo", "exit", "type", "pwd", "cd", "jobs", "history", "complete"}
+BUILTINS = {"echo", "exit", "type", "pwd", "cd",
+            "jobs", "history", "complete", "declare"}
 candidates = EXECUTABLES.union(BUILTINS)
 COMPLETION_CACHE = []
+VARIABLES = {}
 
 
 def write_output(output, stdout_file=None, stderr_file=None, append_stdout=False):
@@ -457,6 +459,20 @@ def run_builtin(args, builtins):
 
         return output.encode()
 
+    elif cmd == "declare":
+        if len(args) >= 2 and args[1] == "-p":
+            if len(args) < 3:
+                return b""
+            var_name = args[2]
+            if var_name in VARIABLES:
+                return f'declare -- {var_name}="{VARIABLES[var_name]}"\n'.encode()
+            return f"declare: {var_name}: not found\n".encode()
+        elif len(args) >= 2 and "=" in args[1]:
+            var_name, value = args[1].split("=", 1)
+            VARIABLES[var_name] = value
+            return b""
+        return b""
+
     elif cmd == "complete":
 
         if len(args) >= 4 and args[1] == "-C":
@@ -530,7 +546,7 @@ def save_history_file():
 
 def main():
     builtins = ["echo", "exit", "type", "pwd",
-                "cd", "jobs", "history", "complete"]
+                "cd", "jobs", "history", "complete", "declare"]
 
     setup_autocomplete()
     setup_autocomplete()
@@ -809,6 +825,20 @@ def main():
 
                 for index, command in enumerate(HISTORY, start=1):
                     print(f"    {index}  {command}")
+
+        elif program == "declare":
+            if len(args) >= 2 and args[1] == "-p":
+                if len(args) < 3:
+                    pass
+                else:
+                    var_name = args[2]
+                    if var_name in VARIABLES:
+                        print(f'declare -- {var_name}="{VARIABLES[var_name]}"')
+                    else:
+                        print(f"declare: {var_name}: not found")
+            elif len(args) >= 2 and "=" in args[1]:
+                var_name, value = args[1].split("=", 1)
+                VARIABLES[var_name] = value
 
         elif program == "complete":
 
