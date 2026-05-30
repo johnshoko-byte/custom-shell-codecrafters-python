@@ -151,7 +151,16 @@ def completer(text, state):
                         return matches[0] + " "
                     return None
 
-                # Multiple matches
+                common = longest_common_prefix(matches)
+
+                # LCP extends current input → complete to it, no bell
+                if common != current_word:
+                    TAB_COUNT = 0
+                    if state == 0:
+                        return common
+                    return None
+
+                # No LCP gain → bell on first tab, list on second
                 if TAB_COUNT == 1:
                     sys.stdout.write("\n" + "  ".join(matches) + "\n")
                     sys.stdout.write("$ " + buffer)
@@ -159,7 +168,6 @@ def completer(text, state):
                     TAB_COUNT = 0
                     return None
 
-                # First tab → bell
                 if state == 0:
                     sys.stdout.write("\a")
                     sys.stdout.flush()
