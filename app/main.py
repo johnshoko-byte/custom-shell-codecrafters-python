@@ -97,56 +97,29 @@ def parse_redirection(command_line):
 
 
 def completer(text, state):
-    global TAB_COUNT
+    global TAB_COUNT, LAST_BUFFER
     buffer = readline.get_line_buffer()
     parts = buffer.split()
 
     # ---------------- REGISTERED COMPLETERS ----------------
-    #
-    # Examples:
-    #
-    # git <TAB>
-    # git rem<TAB>
-    # git remote set<TAB>
-    #
     if len(parts) >= 1:
-
         command_name = parts[0]
 
         if command_name in COMPLETIONS:
-
-            # ---------------- CURRENT WORD ----------------
-            #
-            # If buffer ends with space:
-            #   current word = ""
-            #
-            # Otherwise:
-            #   current word = last token
-            #
             if buffer.endswith(" "):
                 current_word = ""
             else:
                 current_word = parts[-1]
 
-            # ---------------- PREVIOUS WORD ----------------
-            #
-            # git remote set<TAB>
-            # previous = remote
-            #
             previous_word = ""
-
             if buffer.endswith(" "):
-
                 if len(parts) >= 2:
-                    previous_word = parts[-1]
-
+                    previous_word = parts[-2]
             else:
-
                 if len(parts) >= 3:
                     previous_word = parts[-2]
 
             try:
-
                 result = subprocess.run(
                     [
                         COMPLETIONS[command_name],
@@ -175,7 +148,6 @@ def completer(text, state):
                 if not matches:
                     return None
 
-                # single completion for this stage
                 if state == 0:
                     return matches[0] + " "
 
@@ -185,7 +157,6 @@ def completer(text, state):
                 return None
 
     # ---------------- COMMAND COMPLETION ----------------
-
     if len(parts) <= 1 and not buffer.endswith(" "):
 
         candidates = EXECUTABLES.union(BUILTINS)
@@ -195,6 +166,7 @@ def completer(text, state):
             if cmd.startswith(text)
         ])
 
+        # No matches → bell
         if not matches:
             sys.stdout.write("\a")
             sys.stdout.flush()
@@ -210,34 +182,33 @@ def completer(text, state):
                 return matches[0] + " "
             return None
 
-        # Partial prefix expansion (e.g. xyz_ → xyz_pig)
+        # Partial prefix expansion (xyz_ → xyz_pig)
         if common != text:
             TAB_COUNT = 0
             if state == 0:
-                return common   # no trailing space; more chars still needed
+                return common
             return None
 
-        # Multiple matches, no further expansion → bell on first tab
+        # Multiple matches, no further expansion
+        # IMPORTANT: check TAB_COUNT before state
+        if TAB_COUNT == 1:
+            sys.stdout.write("\n" + "  ".join(matches) + "\n")
+            sys.stdout.flush()
+            TAB_COUNT = 0
+            return None
+
+        # First tab → bell and prepare for second tab
         if state == 0:
             sys.stdout.write("\a")
             sys.stdout.flush()
             TAB_COUNT = 1
             return None
 
-        # Second tab → print all matches
-        if TAB_COUNT == 1:
-            sys.stdout.write("\n" + "  ".join(matches) + "\n")
-            sys.stdout.flush()
-            TAB_COUNT = 0
-            if state == 0:
-                return common  # restore what's on the line
-            return None
+        return None
 
     # ---------------- FILE / DIRECTORY COMPLETION ----------------
     token = text
 
-    # CASE 1: token ends with /
-    # example: pig/
     if token.endswith("/"):
         search_dir = token[:-1]
         prefix = ""
@@ -267,7 +238,6 @@ def completer(text, state):
 
     match = matches[state]
 
-    # rebuild proper completed path
     if search_dir == ".":
         completed = match
     else:
@@ -275,11 +245,9 @@ def completer(text, state):
 
     full_match_path = os.path.join(search_dir, match)
 
-    # directory
     if os.path.isdir(full_match_path):
         return completed + "/"
 
-    # file
     return completed + " "
 
 
