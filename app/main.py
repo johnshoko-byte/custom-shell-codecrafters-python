@@ -548,15 +548,7 @@ def main():
     while True:
         try:
             reap_jobs()
-            buffer = ""
-            sys.stdout.write("$ ")
-            sys.stdout.flush()
-
-            while True:
-                c = sys.stdin.read(1)
-
-                if c == "\t":
-                    buffer = complete(buffer)
+            command_line = input("$ ")
 
             original_command = command_line
 
