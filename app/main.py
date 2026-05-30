@@ -128,7 +128,12 @@ def completer(text, state):
                         previous_word
                     ],
                     capture_output=True,
-                    text=True
+                    text=True,
+                    env={
+                        **os.environ,
+                        "COMP_LINE": buffer,
+                        "COMP_POINT": str(len(buffer.encode()))
+                    }
                 )
 
                 candidates = [
