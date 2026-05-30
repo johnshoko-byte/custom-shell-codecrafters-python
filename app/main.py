@@ -548,12 +548,10 @@ def save_history_file():
 
 
 def expand_variables(token):
-    import re
-
     def replace(match):
-        var_name = match.group(1)
+        var_name = match.group(1) or match.group(2)
         return VARIABLES.get(var_name, "")
-    return re.sub(r'\$([a-zA-Z_][a-zA-Z0-9_]*)', replace, token)
+    return re.sub(r'\$\{([a-zA-Z_][a-zA-Z0-9_]*)\}|\$([a-zA-Z_][a-zA-Z0-9_]*)', replace, token)
 
 
 def main():
