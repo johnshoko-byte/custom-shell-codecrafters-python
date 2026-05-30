@@ -195,39 +195,42 @@ def completer(text, state):
             if cmd.startswith(text)
         ])
 
-        # NO MATCHES
         if not matches:
             sys.stdout.write("\a")
             sys.stdout.flush()
             TAB_COUNT = 0
             return None
 
-        # ---------------- FIRST TAB ----------------
-        if TAB_COUNT == 0:
+        common = longest_common_prefix(matches)
 
-            common = longest_common_prefix(matches)
-
-            # single match → complete immediately
-            if len(matches) == 1:
-                TAB_COUNT = 0
+        # Single match → complete with trailing space
+        if len(matches) == 1:
+            TAB_COUNT = 0
+            if state == 0:
                 return matches[0] + " "
+            return None
 
-            # partial prefix expansion
-            if common != text:
-                TAB_COUNT = 0
-                return common
+        # Partial prefix expansion (e.g. xyz_ → xyz_pig)
+        if common != text:
+            TAB_COUNT = 0
+            if state == 0:
+                return common   # no trailing space; more chars still needed
+            return None
 
-            # multiple matches → bell
+        # Multiple matches, no further expansion → bell on first tab
+        if state == 0:
             sys.stdout.write("\a")
             sys.stdout.flush()
             TAB_COUNT = 1
             return None
 
-        # ---------------- SECOND TAB ----------------
+        # Second tab → print all matches
         if TAB_COUNT == 1:
-            sys.stdout.write("  ".join(matches) + "\n")
+            sys.stdout.write("\n" + "  ".join(matches) + "\n")
             sys.stdout.flush()
             TAB_COUNT = 0
+            if state == 0:
+                return common  # restore what's on the line
             return None
 
     # ---------------- FILE / DIRECTORY COMPLETION ----------------
